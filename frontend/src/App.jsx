@@ -18,6 +18,12 @@ const App = () => {
       element: <><Navbar/><Video/></>,
 
     },
+    
+     {
+      path: "/pdf",
+      element: <><Navbar/><Pdf/></>
+    },
+
     {
       path : "/video/:categoryId/:videoId",
       element: <><Navbar/><Pdf/></>,

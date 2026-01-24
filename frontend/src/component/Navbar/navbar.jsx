@@ -8,36 +8,33 @@ import { Link } from 'react-router-dom'
 
 const Navbar = () => {
   return (
-    <nav className="nav-flex">
-      <div className="nav-left">
-        <h1>EdTube</h1>
-        {/* <img src={menu_icon} alt="menu icon" className="menu-icon"/> */}
+  <nav className="nav-flex">
+    <div className="nav-left">
+    <h1>EdTube</h1>
+      {/* <img src={menu_icon} alt="menu icon" className="menu-icon"/> */}
+    </div>
+
+  <div className="nav-center">
+    {/* <img src={home_icon} alt="home icon" class="home-icon"/> */}
+  </div>
+  
+    <div className="nav-right">
+      <Link to="/" className="nav-pill">
+        <img src={home_icon} alt="home icon" />
+        <span>Home</span>
+      </Link>
+      
+      <div className="nav-pill">
+        <img src={more_icon} alt="more icon" />
+        <span>More</span>
       </div>
 
-      <div className="nav-center">
-        {/* <img src={home_icon} alt="home icon" class="home-icon"/> */}
+      <div className="nav-pill">
+        <img src={profile_icon} alt="profile icon" />
+        <span>Sign In</span>
       </div>
-
-      <div className="nav-right">
-        <Link to="/" className="sidebar-link">
-          <div className="sidebar-item">
-            <div className="box">
-              <img src={home_icon} alt="home icon" />
-            </div>
-            <span>HOME</span>
-          </div>
-        </Link>
-        <div className="box">
-          <img src={more_icon} alt="more icon" className="more-icon" />
-        </div>
-        <span>MORE</span>
-
-        <div className="box">
-          <img src={profile_icon} alt="profile icon" className="profile-icon" />
-        </div>
-        <span>SIGN-IN</span>
-      </div>
-    </nav>
+    </div>
+  </nav>
   )
 }
 

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from typing import List
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, Response
-from services.rag import load_youtube_video_stream, query_video, clear_vector_store
+from services.rag import load_youtube_video_stream, query_video, clear_vector_store, debug_corpus_state, debug_retrieve_content
 from services.quiz import generate_quiz, generate_remedial_quiz
 from services.notes import generate_important_notes_pdf
 from services.database import mongodb_service
@@ -113,7 +113,7 @@ async def load_video(request: VideoRequest):
             user_id=request.id, video_url=request.url
         )
 
-        # Clear vector store before loading new video (always clear for fresh data)
+        # Clear vector store globals (for quiz compatibility)
         clear_vector_store()
 
         if existing_conversation:
@@ -135,7 +135,8 @@ async def load_video(request: VideoRequest):
                 )
 
                 # Then stream the video processing updates
-                for chunk in load_youtube_video_stream(request.url):
+                # Pass user_id (request.id) to RAG
+                for chunk in load_youtube_video_stream(request.url, request.id):
                     yield chunk
 
             return StreamingResponse(
@@ -168,78 +169,8 @@ async def load_video(request: VideoRequest):
             )
 
             # Then stream the video processing updates
-            for chunk in load_youtube_video_stream(request.url):
-                yield chunk
-
-        return StreamingResponse(
-            video_processing_stream(), media_type="application/x-ndjson"
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to start video processing: {str(e)}"
-        )
-
-        if existing_conversation:
-            # Video already processed, return existing conversation and process anyway
-            # Clear vector store and process video to ensure fresh data
-            clear_vector_store()
-
-            # Create a generator that first returns conversation info, then streams processing
-            async def video_processing_stream():
-                import json
-
-                # First, yield the existing conversation info
-                yield (
-                    json.dumps(
-                        {
-                            "type": "conversation_info",
-                            "conversation_id": existing_conversation.id,
-                            "status": "existing_conversation",
-                            "message": "Using existing conversation, reprocessing video for fresh data",
-                        }
-                    )
-                    + "\n"
-                )
-
-                # Then stream the video processing updates
-                async for chunk in load_youtube_video_stream(request.url):
-                    yield chunk
-
-            return StreamingResponse(
-                video_processing_stream(), media_type="application/x-ndjson"
-            )
-
-        # No existing conversation, create new one
-        conversation_data = ConversationCreate(
-            user_id=request.id,
-            video_url=request.url,
-            title=None,  # Could be extracted from URL if needed
-        )
-        conversation = await conversation_service.create_conversation(conversation_data)
-
-        # Clear vector store before loading new video
-        clear_vector_store()
-
-        # Create a generator that yields conversation info first, then processing
-        async def new_video_processing_stream():
-            import json
-
-            # First, yield the new conversation info
-            yield (
-                json.dumps(
-                    {
-                        "type": "conversation_info",
-                        "conversation_id": conversation.id,
-                        "status": "new_conversation",
-                        "message": "Created new conversation, processing video",
-                    }
-                )
-                + "\n"
-            )
-
-            # Then stream the video processing updates
-            async for chunk in load_youtube_video_stream(request.url):
+            # Pass user_id (request.id) to RAG
+            for chunk in load_youtube_video_stream(request.url, request.id):
                 yield chunk
 
         return StreamingResponse(
@@ -265,8 +196,8 @@ async def query(request: QueryRequest):
         )
         await message_service.create_message(user_message)
 
-        # Process query with RAG
-        result = query_video(request.query)
+        # Process query with RAG, passing user_id
+        result = query_video(request.query, request.id)
 
         # Save assistant response
         assistant_message = MessageCreate(
@@ -290,6 +221,11 @@ async def query(request: QueryRequest):
         )
 
 
+class RevisionRequest(BaseModel):
+    mistakes: List[WrongQuestion]
+    user_id: str = "demo-user"  # Default for backward compatibility
+
+
 @app.post("/revision_doc", response_model=RevisionResponse)
 async def generate_revision_doc(request: RevisionRequest):
     """Generate a revision document for incorrect questions."""
@@ -300,9 +236,9 @@ async def generate_revision_doc(request: RevisionRequest):
             # Construct a query to explain the concept
             query = f"Explain the concept behind this question: '{mistake.question}'. The correct answer is '{mistake.correct_option}'. Provide a concise explanation."
 
-            # Query the RAG system
+            # Query the RAG system using user_id
             try:
-                result = query_video(query)
+                result = query_video(query, request.user_id)
                 answer = result["answer"]
                 timestamp = result["timestamp"]
             except Exception as e:
@@ -450,6 +386,18 @@ async def update_conversation_notes(conversation_id: str, request: UpdateNotesRe
         raise HTTPException(
             status_code=500, detail=f"Failed to update conversation: {str(e)}"
         )
+
+
+@app.get("/debug/corpus/{user_id}")
+async def get_corpus_debug(user_id: str):
+    """Debug endpoint to inspect the user's RAG corpus state."""
+    return debug_corpus_state(user_id)
+
+
+@app.get("/debug/retrieve/{user_id}")
+async def debug_retrieve(user_id: str, q: str = "What is this video about?"):
+    """Debug endpoint to retrieve content directly from the RAG corpus."""
+    return debug_retrieve_content(user_id, q)
 
 
 if __name__ == "__main__":

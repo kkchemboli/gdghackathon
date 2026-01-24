@@ -173,7 +173,7 @@ const Video = () => {
 
     setIsLoading(true);
     try {
-      const response = await createRevisionDoc(wrongAnswers);
+      const response = await createRevisionDoc(wrongAnswers, userId);
       // Response logic: assuming response.markdown_content contains the markdown
       setFeatureOutput(response.markdown_content);
       setActiveFeature('revision'); // Switch to revision view

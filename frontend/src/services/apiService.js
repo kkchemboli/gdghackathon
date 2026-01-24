@@ -48,11 +48,11 @@ export const fetchQuiz = async (videoId) => {
   }
 }
 
-export const createRevisionDoc = async (mistakes) => {
+export const createRevisionDoc = async (mistakes, userId = 'demo-user') => {
   try {
     const data = await apiRequest(`${PYTHON_API_BASE_URL}/revision_doc`, {
       method: 'POST',
-      body: JSON.stringify({ mistakes }),
+      body: JSON.stringify({ mistakes, user_id: userId }),
     })
     return data
   } catch (error) {
@@ -138,7 +138,7 @@ export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') =
   try {
     // Generate a simple ID from the URL if not provided
     const videoId = videoUrl.split('v=')[1] || videoUrl.split('/').pop() || 'unknown'
-    
+
     const response = await fetch(`${PYTHON_API_BASE_URL}/video`, {
       method: 'POST',
       body: JSON.stringify({
@@ -176,14 +176,14 @@ export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') =
         if (line.trim()) {
           try {
             const data = JSON.parse(line);
-            
+
             // Capture conversation info from the first message
             if (data.type === 'conversation_info' && !conversationId) {
               conversationId = data.conversation_id;
               conversationStatus = data.status;
               console.log('Conversation info received:', { conversationId, conversationStatus });
             }
-            
+
             if (onProgress) {
               onProgress(data);
             }
@@ -201,14 +201,14 @@ export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') =
     if (buffer.trim()) {
       try {
         const data = JSON.parse(buffer);
-        
+
         // Capture conversation info from the final message if not already captured
         if (data.type === 'conversation_info' && !conversationId) {
           conversationId = data.conversation_id;
           conversationStatus = data.status;
           console.log('Conversation info received from buffer:', { conversationId, conversationStatus });
         }
-        
+
         if (onProgress) onProgress(data);
         if (data.status === 'error') {
           throw new Error(data.message);
@@ -218,10 +218,10 @@ export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') =
       }
     }
 
-    return { 
-      status: 'success', 
+    return {
+      status: 'success',
       conversationId,
-      conversationStatus 
+      conversationStatus
     }
   } catch (error) {
     console.error('Video Processing Error:', error)

@@ -1,102 +1,89 @@
 import json
 import os
-import uuid
-from langchain.agents import create_agent
-from langchain.agents.middleware import dynamic_prompt, ModelRequest
+import vertexai
+from vertexai.preview import rag
+from vertexai.generative_models import GenerativeModel, Tool, SafetySetting
 from langchain_community.document_loaders import YoutubeLoader
 from langchain_community.document_loaders.youtube import TranscriptFormat
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings
-from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from langgraph.checkpoint.memory import InMemorySaver
-from pydantic import BaseModel, Field
-from langchain_pinecone import PineconeVectorStore
-from pinecone.grpc import PineconeGRPC as Pinecone
-from pinecone import ServerlessSpec, PodSpec  
+
 load_dotenv()
 
-class Response(BaseModel):
-    """Response from the agent."""
-    answer: str = Field(description="The answer to the question")
-    timestamp: str = Field(description="The timestamp to the answer")
+# Initialize Vertex AI
+PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+# RAG is in us-west1, but models might be better supported in us-central1
+LOCATION = "us-west1"
+MODEL_LOCATION = "us-central1"
 
-# Initialize model, embeddings, and vector store as module-level variables
-model = ChatGroq(model="openai/gpt-oss-20b", temperature=0)
-embeddings = OllamaEmbeddings(model="nomic-embed-text:latest")
+if PROJECT_ID:
+    print(f"DEBUG: Initializing Vertex AI with project={PROJECT_ID}, location={LOCATION}")
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+else:
+    print("Warning: GCP_PROJECT_ID not set. Vertex AI functionality will fail.")
 
-"""vector_store = Chroma(
-    collection_name="hackathon",
-    embedding_function=embeddings,
-    persist_directory="./chroma_db",
-)"""
-
-# Global set to store extracted concepts
-concepts_set: set = set()
-# Global list to store current documents for quiz generation
-current_docs: list = []
+# Global variables
+# Use a very standard model name. If this fails, we might need to check if the project has access.
+model = GenerativeModel("gemini-2.5-flash")
+current_docs = []
+concepts_set = set()
 BATCH_SIZE = 10
 
-# Create agent with middleware
-@dynamic_prompt
-def prompt_with_context(request: ModelRequest) -> str:
-    """Inject context into state messages."""
-    last_query = request.state["messages"][-1].text
-    retrieved_docs = vector_store.similarity_search(last_query)
-    docs_content = "\n\n".join(
-        f"[Timestamp: {doc.metadata['start_timestamp']}]\n"
-        f"{doc.page_content}"
-        for doc in retrieved_docs
-    )
-
-    system_message = (
-    "You are a helpful assistant.\n"
-    "Keep responses short and grounded in the provided context.\n"
-    "Return your answer ONLY as valid JSON in the following format:\n\n"
-    "{\n"
-    '  "answer": string,\n'
-    '  "timestamp": string  // HH:MM:SS\n'
-    "}\n\n"
-    "Use the timestamp from the context that supports the answer.\n"
-    "The answer field should include an instruction suggesting the user to watch from the timestamp onwards.\n"
-    "If the user query is not present in or related to the provided context, "
-    "answer using your own general knowledge, set the timestamp to \"00:00:00\","
-    "Do not include any text outside the JSON.\n\n"
-    f"{docs_content}"
-)
-
-    return system_message
-
-
-agent = create_agent(model, tools=[], middleware=[prompt_with_context], checkpointer=InMemorySaver(),response_format=Response)
-
-
-def clear_vector_store():
-    """Clear all documents from the vector store and memory."""
+def get_or_create_corpus(user_id: str):
+    """Get existing corpus for user or create a new one."""
+    display_name = f"user-{user_id}"
+    
+    # List all corpora to find existing one
+    # Note: list_corpora returns an iterable
     try:
-        # Clear in-memory docs
-        global current_docs
-        current_docs = []
-        
-        # Pinecone doesn't support .get() and delete by ID the same way Chroma does
-        # For now, we rely on the fact that we might not need to explicitly delete from Pinecone 
-        # for a simple hackathon demo if we are just searching, but ideally we would delete.
-        # However, to fix the crash, we simply remove the invalid call.
-        # If strict index clearing is needed, we would need to delete_all or delete by metadata.
-        pass
+        corpora = rag.list_corpora()
+        for corpus in corpora:
+            if corpus.display_name == display_name:
+                print(f"Found existing corpus for user {user_id}: {corpus.name}")
+                return corpus
     except Exception as e:
-        print(f"Error clearing vector store: {e}")
+        print(f"Error listing corpora: {e}")
+        
+    print(f"Creating new corpus for user {user_id}...")
+    return rag.create_corpus(display_name=display_name)
 
+def purge_corpus_files(corpus_name: str):
+    """Delete all files in the specified corpus."""
+    try:
+        print(f"Purging files from corpus: {corpus_name}")
+        files = list(rag.list_files(corpus_name=corpus_name))
+        count = 0
+        for file in files:
+            print(f"Deleting file: {file.name} ({file.display_name})")
+            rag.delete_file(name=file.name)
+            count += 1
+        print(f"Purged {count} files from corpus {corpus_name}")
+        
+        # Verify emptiness (optional, but good for debugging)
+        remaining = list(rag.list_files(corpus_name=corpus_name))
+        if remaining:
+            print(f"WARNING: {len(remaining)} files remain after purge!")
+            for f in remaining:
+                print(f"  - {f.name}")
+        else:
+             print("Corpus is now empty.")
+
+    except Exception as e:
+        print(f"Error purging corpus files: {e}")
 
 def extract_concepts_batch(combined_text: str) -> list:
     """Extract concepts from a combined text block using the LLM."""
     try:
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant. Extract the main concepts or topics discussed in the following text. Return a JSON array of concept strings (max 5-10 words each). Return ONLY the JSON array, no other text."},
-            {"role": "user", "content": combined_text}
-        ]
-        response = model.invoke(messages)
-        content = response.content.strip()
+        prompt = f"""You are a helpful assistant. Extract the main concepts or topics discussed in the following text. 
+Return a JSON array of concept strings (max 5-10 words each). 
+Return ONLY the JSON array, no other text.
+
+Text:
+{combined_text}
+"""
+        response = model.generate_content(prompt)
+        content = response.text.strip()
+        
         # Clean markdown if present
         if content.startswith("```json"):
             content = content[7:]
@@ -104,50 +91,51 @@ def extract_concepts_batch(combined_text: str) -> list:
             content = content[3:]
         if content.endswith("```"):
             content = content[:-3]
+            
         concepts = json.loads(content)
         return concepts if isinstance(concepts, list) else []
     except Exception as e:
         print(f"Error extracting concepts: {e}")
         return []
 
-
 def get_concepts() -> list:
     """Return the current set of extracted concepts as a list."""
     return list(concepts_set)
 
-
-
-def load_youtube_video_stream(url: str):
-    """Load YouTube video transcript, split it, and add to vector store yielding progress.
+def clear_vector_store():
+    """Context clearing wrapper.
     
-    Yields:
-        str: JSON string with status and progress info
+    For local globals, reset them.
+    Corpus clearing is handled during load_video.
     """
+    global current_docs
+    current_docs = []
+    global concepts_set
+    concepts_set = set()
+
+def load_youtube_video_stream(url: str, user_id: str):
+    """Load YouTube video transcript, process, and upload to Vertex RAG yielding progress."""
     try:
-        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))  
-        spec = ServerlessSpec(cloud='aws', region='us-east-1')  
-        index_name = "yt-rag"
-        if pc.has_index(index_name):  
-            print("Index already exists, deleting...")
-            pc.delete_index(name=index_name) 
-        pc.create_index(  
-    index_name,  
-    dimension=768,  # dimensionality of text-embedding-ada-002  
-    metric='cosine',  
-    spec=spec  
-)  
-        global vector_store 
-        vector_store = PineconeVectorStore(index_name=index_name, embedding=embeddings) 
-        # Validate URL format
+        if not PROJECT_ID:
+             yield json.dumps({"status": "error", "message": "GCP_PROJECT_ID not set"}) + "\n"
+             return
+
+        # Validate URL
         if not url or not isinstance(url, str):
-            yield json.dumps({"status": "error", "message": "Invalid URL: URL must be a non-empty string"}) + "\n"
+            yield json.dumps({"status": "error", "message": "Invalid URL"}) + "\n"
             return
         
-        if "youtube.com" not in url and "youtu.be" not in url:
-            yield json.dumps({"status": "error", "message": "Invalid URL: Must be a YouTube URL"}) + "\n"
+        # Get/Create User Corpus
+        yield json.dumps({"status": "progress", "message": "Initializing user knowledge base...", "progress": 5}) + "\n"
+        try:
+            corpus = get_or_create_corpus(user_id)
+            # Ensure fresh start for this video
+            purge_corpus_files(corpus.name)
+        except Exception as e:
+            yield json.dumps({"status": "error", "message": f"Failed to access RAG corpus: {str(e)}"}) + "\n"
             return
-        
-        # Load YouTube transcript
+
+        # Load Transcript
         yield json.dumps({"status": "progress", "message": "Loading transcript...", "progress": 10}) + "\n"
         try:
             loader = YoutubeLoader.from_youtube_url(
@@ -158,95 +146,216 @@ def load_youtube_video_stream(url: str):
             )
             documents = loader.load()
         except Exception as e:
-            error_msg = str(e).lower()
-            if "transcript" in error_msg or "subtitle" in error_msg:
-                 yield json.dumps({"status": "error", "message": f"Transcript not available: {str(e)}"}) + "\n"
-            elif "url" in error_msg or "invalid" in error_msg:
-                 yield json.dumps({"status": "error", "message": f"Invalid YouTube URL: {str(e)}"}) + "\n"
-            else:
-                 yield json.dumps({"status": "error", "message": f"Failed to load video: {str(e)}"}) + "\n"
-            return
+             yield json.dumps({"status": "error", "message": f"Failed to load video: {str(e)}"}) + "\n"
+             return
         
         if not documents:
-            yield json.dumps({"status": "error", "message": "No documents loaded from video transcript"}) + "\n"
+            yield json.dumps({"status": "error", "message": "No transcript found"}) + "\n"
             return
         
-        # Split documents
-        yield json.dumps({"status": "progress", "message": "Splitting documents...", "progress": 20}) + "\n"
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,  # chunk size (characters)
-            chunk_overlap=200,  # chunk overlap (characters)
-            add_start_index=True,  # track index in original document
-        )
-        all_splits = text_splitter.split_documents(documents)
-        
-        if not all_splits:
-             yield json.dumps({"status": "error", "message": "No text chunks created"}) + "\n"
-             return
+        # Debug Log for RAG Content
+        first_chunk_snippet = documents[0].page_content[:200]
+        print(f"DEBUG: First transcript chunk: {first_chunk_snippet}")
 
-        # Store docs in memory for quiz generation
+        # Update global current_docs for quiz.py
         global current_docs
-        current_docs = all_splits
+        current_docs = documents
+
+        # Format transcript with timestamps for RAG
+        yield json.dumps({"status": "progress", "message": "Processing transcript...", "progress": 20}) + "\n"
+        formatted_transcript = ""
+        for doc in documents:
+            raw_ts = doc.metadata.get('start_timestamp', 0)
+            ts_str = "00:00:00"
+            
+            try:
+                # If it's already a formatted string like HH:MM:SS
+                if isinstance(raw_ts, str) and ":" in raw_ts:
+                    ts_str = raw_ts
+                else:
+                    # Treat as seconds (int or float)
+                    timestamp = int(float(raw_ts))
+                    h = timestamp // 3600
+                    m = (timestamp % 3600) // 60
+                    s = timestamp % 60
+                    ts_str = f"{h:02d}:{m:02d}:{s:02d}"
+            except Exception:
+                # Fallback
+                ts_str = "00:00:00"
+
+            formatted_transcript += f"[{ts_str}] {doc.page_content}\n\n"
         
-        # Clear and populate concepts_set via batch processing
+        # Save to temp file
+        temp_file_path = f"temp_transcript_{user_id}.txt"
+        with open(temp_file_path, "w") as f:
+            f.write(formatted_transcript)
+            
+        # Extract Concepts (Parallelish)
         global concepts_set
         concepts_set = set()
         
-        num_batches = (len(all_splits) + BATCH_SIZE - 1) // BATCH_SIZE
-        # Progress from 20 to 90
+        # We can do a quick concept extraction on a subset or full text
+        # For progress bar niceness, let's do it in a loop
+        # But for RAG, the upload is the main part.
+        # Let's run concept extraction on chunks.
         
-        for batch_idx in range(num_batches):
-            start = batch_idx * BATCH_SIZE
-            end = min(start + BATCH_SIZE, len(all_splits))
-            batch_docs = all_splits[start:end]
-            
-            combined_text = "\n\n".join(doc.page_content for doc in batch_docs)
-            batch_concepts = extract_concepts_batch(combined_text)
+        full_text = formatted_transcript
+        # Split purely for concept extraction batches
+        text_chunks = [full_text[i:i+4000] for i in range(0, len(full_text), 4000)]
+        
+        num_batches = len(text_chunks)
+        for i, chunk in enumerate(text_chunks):
+            batch_concepts = extract_concepts_batch(chunk)
             concepts_set.update(batch_concepts)
             
-            # Calculate progress between 20 and 90
-            current_progress = 20 + int((batch_idx + 1) / num_batches * 70)
+            prog = 20 + int((i+1)/num_batches * 40) # 20 to 60
             yield json.dumps({
                 "status": "progress", 
-                "message": f"Processing batch {batch_idx + 1}/{num_batches}", 
-                "progress": current_progress
+                "message": f"Extracting concepts {i+1}/{num_batches}", 
+                "progress": prog
             }) + "\n"
+
+        # Import to Vertex RAG
+        yield json.dumps({"status": "progress", "message": "Indexing to Vertex AI...", "progress": 70}) + "\n"
         
-        # Add to vector store
-        yield json.dumps({"status": "progress", "message": "Indexing vector store...", "progress": 95}) + "\n"
         try:
-            vector_store.add_documents(documents=all_splits)
-            yield json.dumps({"status": "completed", "message": "Video processed successfully", "progress": 100}) + "\n"
-        except Exception as e:
-            yield json.dumps({"status": "error", "message": f"Failed to add documents to vector store: {str(e)}"}) + "\n"
+            # Using upload_file for local files
+            rag.upload_file(
+                corpus_name=corpus.name,
+                path=temp_file_path,
+                display_name=f"transcript_{user_id}",
+                description="Youtube Video Transcript"
+            )
             
+            # Clean up temp file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+                
+            yield json.dumps({"status": "completed", "message": "Video processed successfully", "progress": 100}) + "\n"
+            
+        except Exception as e:
+            yield json.dumps({"status": "error", "message": f"Vertex RAG Import failed: {str(e)}"}) + "\n"
+            # Cleanup
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
     except Exception as e:
         yield json.dumps({"status": "error", "message": f"Unexpected error: {str(e)}"}) + "\n"
 
-
-def query_video(query: str) -> dict:
-    """Process a query and return answer with timestamp.
-    
-    Raises:
-        ValueError: If query is empty or invalid
-        Exception: For errors during agent processing or vector store operations
-    """
-    # Validate query
-    if not query or not isinstance(query, str) or not query.strip():
-        raise ValueError("Query must be a non-empty string")
-    
-    # Stream the agent response
+def query_video(query: str, user_id: str) -> dict:
+    """Process a query using Vertex RAG with explicit context injection."""
+    if not query:
+        raise ValueError("Query cannot be empty")
+        
     try:
-        final_response = None
-        final_response = agent.invoke(
-            {"messages": [{"role": "user", "content": query}]},
-            {"configurable":{"thread_id": "1"}},
+        corpus = get_or_create_corpus(user_id)
+        
+        # Explicitly retrieve content from the corpus
+        retrieval_response = rag.retrieval_query(
+            rag_resources=[rag.RagResource(rag_corpus=corpus.name)],
+            text=query,
+            similarity_top_k=5,
+            vector_distance_threshold=0.65
         )
-        final_response = final_response["structured_response"]
         
-        if not final_response:
-            raise Exception("Agent did not return a response")
+        # Build context from retrieved chunks
+        context_parts = []
+        for ctx in retrieval_response.contexts.contexts:
+            context_parts.append(ctx.text)
         
-        return final_response.dict()
+        context = "\n\n---\n\n".join(context_parts) if context_parts else "No relevant context found."
+        
+        print(f"DEBUG query_video: Retrieved {len(context_parts)} chunks for query: {query[:50]}...")
+        if context_parts:
+            print(f"DEBUG query_video: First chunk preview: {context_parts[0][:100]}...")
+        
+        # Ensure we are initialized in a region that supports the model
+        # Try to re-init if us-west1 failed for generative models previously
+        vertexai.init(project=PROJECT_ID, location=MODEL_LOCATION)
+        
+        # Generate answer using the retrieved context
+        prompt = f"""You are a helpful assistant. Answer the user's question based ONLY on the provided context (Youtube Video Transcript).
+If the answer is in the context, provide the timestamp from the context in the format HH:MM:SS.
+Return your answer in the following JSON format:
+{{
+  "answer": "string",
+  "timestamp": "HH:MM:SS"
+}}
+If the context doesn't contain the answer, say so and set timestamp to "00:00:00".
+
+CONTEXT:
+{context}
+
+USER QUESTION: {query}"""
+
+        response = model.generate_content(prompt)
+        
+        # Re-init back to RAG location just in case
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        
+        # Parse response
+        try:
+            text = response.text.strip()
+            # Clean markdown
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+                
+            res_json = json.loads(text)
+            return res_json
+        except Exception:
+            # Fallback if not JSON
+            return {
+                "answer": response.text,
+                "timestamp": "00:00:00"
+            }
+            
     except Exception as e:
-        raise Exception(f"Failed to process query with agent: {str(e)}")
+        raise Exception(f"Query failed: {str(e)}")
+
+def debug_corpus_state(user_id: str) -> dict:
+    """Return the files currently in the user's corpus."""
+    try:
+        corpus = get_or_create_corpus(user_id)
+        files = list(rag.list_files(corpus_name=corpus.name))
+        return {
+            "corpus_name": corpus.name,
+            "display_name": corpus.display_name,
+            "created_time": str(corpus.create_time),
+            "file_count": len(files),
+            "files": [{"name": f.name, "display_name": f.display_name} for f in files]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def debug_retrieve_content(user_id: str, query: str) -> dict:
+    """Directly retrieve content from the user's corpus for debugging."""
+    try:
+        corpus = get_or_create_corpus(user_id)
+        
+        # Use the rag.retrieval_query to get the raw chunks
+        response = rag.retrieval_query(
+            rag_resources=[rag.RagResource(rag_corpus=corpus.name)],
+            text=query,
+            similarity_top_k=3,
+            vector_distance_threshold=0.8
+        )
+        
+        chunks = []
+        for context in response.contexts.contexts:
+            chunks.append({
+                "text": context.text[:500],  # Truncate for readability
+                "source_uri": context.source_uri,
+                "distance": context.distance
+            })
+        
+        return {
+            "query": query,
+            "chunk_count": len(chunks),
+            "chunks": chunks
+        }
+    except Exception as e:
+        return {"error": str(e)}
