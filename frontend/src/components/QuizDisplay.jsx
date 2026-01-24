@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import './QuizDisplay.css';
+import { submitFeedback } from '../services/apiService';
 
 const QuizDisplay = ({ questions, onWrongAnswer, onCreateRevision }) => {
     // Track selected option for each question: { [questionIndex]: selectedOptionString }
     const [selectedOptions, setSelectedOptions] = useState({});
     // Track checked state to disable further clicks: { [questionIndex]: boolean }
     const [checkedState, setCheckedState] = useState({});
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [feedbackStatus, setFeedbackStatus] = useState(null); // { type: 'success' | 'error', message: string }
 
     const handleOptionClick = (questionIndex, option, correctOption, questionObj) => {
         // If already checked, do nothing
@@ -26,6 +31,31 @@ const QuizDisplay = ({ questions, onWrongAnswer, onCreateRevision }) => {
             if (onWrongAnswer) {
                 onWrongAnswer(questionObj);
             }
+        }
+    };
+
+    const handleFeedbackSubmit = async () => {
+        if (!feedbackText.trim()) return;
+
+        setIsSubmitting(true);
+        setFeedbackStatus(null);
+        try {
+            const userId = 'demo-user'; // Default for now
+            const result = await submitFeedback(userId, feedbackText);
+            setFeedbackStatus({
+                type: 'success',
+                message: result.stored ? 'Preference saved!' : 'Feedback received.'
+            });
+            setFeedbackText('');
+            // Auto-close after 2 seconds
+            setTimeout(() => {
+                setIsFeedbackOpen(false);
+                setFeedbackStatus(null);
+            }, 2000);
+        } catch (error) {
+            setFeedbackStatus({ type: 'error', message: 'Failed to send feedback.' });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -87,11 +117,49 @@ const QuizDisplay = ({ questions, onWrongAnswer, onCreateRevision }) => {
                 ))}
             </div>
 
-            {onCreateRevision && (
-                <div className="quiz-footer">
+            <div className="quiz-footer" style={{ gap: '15px' }}>
+                {onCreateRevision && (
                     <button className="revision-btn" onClick={onCreateRevision}>
                         📝 Create Revision Doc
                     </button>
+                )}
+                <button className="feedback-toggle-btn" onClick={() => setIsFeedbackOpen(true)}>
+                    💬 Provide Feedback
+                </button>
+            </div>
+
+            {isFeedbackOpen && (
+                <div className="feedback-modal-overlay">
+                    <div className="feedback-modal">
+                        <div className="feedback-modal-header">
+                            <h4>Personalize Your Agent</h4>
+                            <button className="close-modal" onClick={() => setIsFeedbackOpen(false)}>✕</button>
+                        </div>
+                        <p className="feedback-hint">
+                            Tell the agent how to improve (e.g., "The explanation was too complex" or "I prefer visual examples").
+                        </p>
+                        <textarea
+                            className="feedback-input"
+                            placeholder="Type your feedback here..."
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            disabled={isSubmitting}
+                        />
+                        {feedbackStatus && (
+                            <div className={`feedback-status ${feedbackStatus.type}`}>
+                                {feedbackStatus.message}
+                            </div>
+                        )}
+                        <div className="feedback-modal-footer">
+                            <button
+                                className="submit-feedback-btn"
+                                onClick={handleFeedbackSubmit}
+                                disabled={isSubmitting || !feedbackText.trim()}
+                            >
+                                {isSubmitting ? 'Sending...' : 'Submit Feedback'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

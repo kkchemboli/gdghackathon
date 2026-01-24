@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse, Response
 from services.rag import load_youtube_video_stream, query_video, clear_vector_store, debug_corpus_state, debug_retrieve_content
 from services.quiz import generate_quiz, generate_remedial_quiz
 from services.notes import generate_important_notes_pdf
+from services.feedback_agent import feedback_agent
 from services.database import mongodb_service
 from services.user_service import user_service
 from services.conversation_service import conversation_service
@@ -106,6 +107,17 @@ class QuizRequest(BaseModel):
 
 class QuizResponse(BaseModel):
     questions: List[QuizQuestion]
+
+
+class FeedbackRequest(BaseModel):
+    user_id: str
+    feedback_text: str
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+    message: str
+    stored: bool
 
 
 @app.post("/video")
@@ -225,7 +237,7 @@ async def query(request: QueryRequest):
         await message_service.create_message(user_message)
 
         # Process query with RAG, passing user_id
-        result = query_video(request.query, request.id)
+        result = await query_video(request.query, request.id)
 
         # Save assistant response
         assistant_message = MessageCreate(
@@ -266,7 +278,7 @@ async def generate_revision_doc(request: RevisionRequest):
 
             # Query the RAG system using user_id
             try:
-                result = query_video(query, request.user_id)
+                result = await query_video(query, request.user_id)
                 answer = result["answer"]
                 timestamp = result["timestamp"]
             except Exception as e:
@@ -398,7 +410,7 @@ async def get_important_notes(user_id: str, conversation_id: str):
         
         concepts = conversation.concepts
         print(f"DEBUG: Found {len(concepts)} concepts: {concepts}")
-        pdf_bytes = generate_important_notes_pdf(user_id, concepts)
+        pdf_bytes = await generate_important_notes_pdf(user_id, concepts)
         print(f"DEBUG: PDF generated successfully, size={len(pdf_bytes)}")
         return Response(content=pdf_bytes, media_type="application/pdf")
     except Exception as e:
@@ -438,6 +450,19 @@ async def get_corpus_debug(user_id: str):
 async def debug_retrieve(user_id: str, q: str = "What is this video about?"):
     """Debug endpoint to retrieve content directly from the RAG corpus."""
     return debug_retrieve_content(user_id, q)
+
+
+@app.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(request: FeedbackRequest):
+    """Submit user feedback for agent personalization."""
+    stored, message = await feedback_agent.process_feedback(
+        request.user_id, request.feedback_text
+    )
+    return FeedbackResponse(
+        status="success" if stored else "acknowledged",
+        message=message,
+        stored=stored,
+    )
 
 
 if __name__ == "__main__":

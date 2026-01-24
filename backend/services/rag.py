@@ -8,6 +8,7 @@ from langchain_community.document_loaders.youtube import TranscriptFormat
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
 from typing import Optional, List
+from services.feedback_agent import feedback_agent
 
 load_dotenv()
 
@@ -218,7 +219,7 @@ def load_youtube_video_stream(url: str, user_id: str):
     except Exception as e:
         yield json.dumps({"status": "error", "message": f"Unexpected error: {str(e)}"}) + "\n"
 
-def query_video(query: str, user_id: str) -> dict:
+async def query_video(query: str, user_id: str) -> dict:
     """Process a query using Vertex RAG with explicit context injection."""
     if not query:
         raise ValueError("Query cannot be empty")
@@ -249,6 +250,12 @@ def query_video(query: str, user_id: str) -> dict:
         # Try to re-init if us-west1 failed for generative models previously
         vertexai.init(project=PROJECT_ID, location=MODEL_LOCATION)
         
+        # Get user memories for personalization
+        memories = await feedback_agent.get_user_memories(user_id)
+        if memories:
+            context = f"{memories}\n\n---\n\n{context}"
+            print(f"DEBUG query_video: Injected user memories for {user_id}")
+
         # Generate answer using the retrieved context
         prompt = f"""You are a helpful assistant. Answer the user's question based ONLY on the provided context (Youtube Video Transcript).
 If the answer is in the context, provide the timestamp from the context in the format HH:MM:SS.

@@ -12,7 +12,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
-def generate_important_notes_pdf(user_id: str, concepts: list):
+async def generate_important_notes_pdf(user_id: str, concepts: list):
     """Generate a PDF of important notes using extracted concepts and a single RAG call."""
     print(f"DEBUG: generate_important_notes_pdf starting for user {user_id}")
     
@@ -40,7 +40,7 @@ def generate_important_notes_pdf(user_id: str, concepts: list):
     print(f"DEBUG: Querying RAG with: {query[:100]}...")
     
     try:
-        result = query_video(query, user_id)
+        result = await query_video(query, user_id)
         print(f"DEBUG: RAG result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
         
         if isinstance(result, dict):

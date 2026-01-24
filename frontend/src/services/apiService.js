@@ -288,3 +288,20 @@ export const processPdf = async (formData) => {
     throw error
   }
 }
+
+// User Preference/Feedback API
+export const submitFeedback = async (userId, feedbackText) => {
+  try {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        feedback_text: feedbackText
+      })
+    })
+    return data
+  } catch (error) {
+    console.error('Feedback Submission Error:', error)
+    throw error
+  }
+}

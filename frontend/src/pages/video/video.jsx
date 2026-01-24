@@ -3,7 +3,7 @@ import './video.css'
 import { Link } from 'react-router-dom'
 import QuizDisplay from '../../components/QuizDisplay'
 import ReactMarkdown from 'react-markdown'
-import { fetchQuiz, fetchFlashcards, fetchImportantTopics, processVideo, createRevisionDoc, learnFromMistakes } from '../../services/apiService'
+import { fetchQuiz, fetchFlashcards, fetchImportantTopics, processVideo, createRevisionDoc, learnFromMistakes, submitFeedback } from '../../services/apiService'
 import Chatbox from '../../components/Chatbox'
 import { Spinner } from '../../components/ui/spinner'
 import quiz_icon from '../../assets/quiz.png'
@@ -30,6 +30,12 @@ const Video = () => {
   // Conversation management state
   const [currentConversation, setCurrentConversation] = useState(null)
   const [userId] = useState('demo-user') // In a real app, this would come from auth
+
+  // Feedback state
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState(null);
 
   const handleProcess = async () => {
     if (!input) return;
@@ -216,6 +222,29 @@ const Video = () => {
     console.log('Conversation changed:', conversation)
   }
 
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackText.trim()) return;
+
+    setIsSubmittingFeedback(true);
+    setFeedbackStatus(null);
+    try {
+      const result = await submitFeedback(userId, feedbackText);
+      setFeedbackStatus({
+        type: 'success',
+        message: result.stored ? 'Preference saved!' : 'Feedback received.'
+      });
+      setFeedbackText('');
+      setTimeout(() => {
+        setIsFeedbackOpen(false);
+        setFeedbackStatus(null);
+      }, 2000);
+    } catch (error) {
+      setFeedbackStatus({ type: 'error', message: 'Failed to send feedback.' });
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   return (
     <>
       <Sidebar />
@@ -314,7 +343,14 @@ const Video = () => {
                     </div>
                   </div>
                 ) : activeFeature === 'important' ? (
-                  <iframe src={featureOutput} width="100%" height="600px" title="Important Topics PDF" style={{ border: 'none' }} />
+                  <div className="pdf-view-container">
+                    <iframe src={featureOutput} width="100%" height="600px" title="Important Topics PDF" style={{ border: 'none' }} />
+                    <div className="pdf-footer">
+                      <button className="feedback-btn" onClick={() => setIsFeedbackOpen(true)}>
+                        💬 Feedback on these notes
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   // For other features (text based)
                   typeof featureOutput === 'string' ? featureOutput.split('\n').map((line, idx) => (
@@ -364,6 +400,42 @@ const Video = () => {
             />
           </div>
         </div>
+
+        {/* Feedback Modal (Shared for Video Page) */}
+        {isFeedbackOpen && (
+          <div className="feedback-modal-overlay">
+            <div className="feedback-modal">
+              <div className="feedback-modal-header">
+                <h4>Improve Your Agent</h4>
+                <button className="close-modal" onClick={() => setIsFeedbackOpen(false)}>✕</button>
+              </div>
+              <p className="feedback-hint">
+                Help the AI understand your learning style better (e.g., "These notes are too brief" or "I need more examples").
+              </p>
+              <textarea
+                className="feedback-input"
+                placeholder="Type your feedback here..."
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                disabled={isSubmittingFeedback}
+              />
+              {feedbackStatus && (
+                <div className={`feedback-status ${feedbackStatus.type}`}>
+                  {feedbackStatus.message}
+                </div>
+              )}
+              <div className="feedback-modal-footer">
+                <button
+                  className="submit-feedback-btn"
+                  onClick={handleFeedbackSubmit}
+                  disabled={isSubmittingFeedback || !feedbackText.trim()}
+                >
+                  {isSubmittingFeedback ? 'Sending...' : 'Submit Feedback'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
