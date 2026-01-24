@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { getUserConversations } from '../../../services/apiService'
+import { getUserConversations } from '../../services/apiService'
 import { Conversation } from './types'
 
 interface ConversationSelectorProps {
@@ -75,7 +75,7 @@ const ConversationSelector: React.FC<ConversationSelectorProps> = ({
                     disabled={isLoading}
                 >
                     <span className="truncate">
-                        {selectedConversation
+                        {selectedConversation 
                             ? getVideoTitle(selectedConversation)
                             : currentVideoConversation
                                 ? `${getVideoTitle(currentVideoConversation)} (Current)`
@@ -84,10 +84,10 @@ const ConversationSelector: React.FC<ConversationSelectorProps> = ({
                                     : 'Select Conversation'
                         }
                     </span>
-                    <svg
+                    <svg 
                         className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
+                        fill="none" 
+                        stroke="currentColor" 
                         viewBox="0 0 24 24"
                     >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -99,8 +99,9 @@ const ConversationSelector: React.FC<ConversationSelectorProps> = ({
                         <div className="p-2">
                             <button
                                 onClick={() => handleConversationSelect(null)}
-                                className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors ${!selectedConversation ? 'bg-white/10' : ''
-                                    }`}
+                                className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors ${
+                                    !selectedConversation ? 'bg-white/10' : ''
+                                }`}
                             >
                                 <div className="text-white">New Conversation</div>
                                 <div className="text-[#cdcdcd] text-xs">Start fresh</div>
@@ -133,8 +134,9 @@ const ConversationSelector: React.FC<ConversationSelectorProps> = ({
                                     <button
                                         key={conversation.id}
                                         onClick={() => handleConversationSelect(conversation)}
-                                        className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors ${selectedConversation?.id === conversation.id ? 'bg-white/10' : ''
-                                            }`}
+                                        className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors ${
+                                            selectedConversation?.id === conversation.id ? 'bg-white/10' : ''
+                                        }`}
                                     >
                                         <div className="text-white truncate">
                                             {getVideoTitle(conversation)}

@@ -7,7 +7,7 @@ import {
     useMessage,
 } from '@assistant-ui/react'
 
-import { useFastApiRuntime, setCurrentConversation, getConversationState } from '../../../runtime/fastapiRuntime'
+import { useFastApiRuntime, setCurrentConversation, getConversationState } from '../../runtime/fastapiRuntime'
 import ConversationSelector from './ConversationSelector'
 import { Conversation, ChatboxProps } from './types'
 
