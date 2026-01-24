@@ -1,117 +1,132 @@
 /* Main sidebar container */
 .sidebar-main {
-  width: 120px;
-  height: 100%;
-  background-color: #fbf9f9;
+  width: 240px;
+  height: calc(100vh - 80px);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 15px 0;
+  padding: 30px 0;
   position: fixed;
   left: 0;
-  top: 100px;
-  border-right: 3px solid;
-  border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 0 1 0 0;
+  top: 80px;
+  /* Matches navbar height */
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 999;
 }
+
+/* Add a separate element for the gradient border if needed, 
+   but for now, a subtle right border is more premium. 
+   Let's use a subtle indicator on the active item instead. 
+*/
 
 /* Upper section for icons */
 .sidebar-upper {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.sidebar-divider {
-  width: 80%;
-  border: none;
-  border-top: 1px solid #060606;
-  margin: 10px 0;
-}
-
-.sidebar-upper div {
-  display: flex;
+  gap: 24px;
+  width: 100%;
   align-items: center;
-  gap: 5px;
-}
-
-/* Icon styling */
-.sidebar-upper img {
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-/* Hover effect */
-.sidebar-upper img:hover {
-  transform: scale(1.1);
-  opacity: 0.8;
-}
-
-/* History section */
-.sidebar-main h3 .box {
-  border: 1px solid #090909;
-  color: #111010;
-  font-size: 14px;
-  font-weight: 500;
-  margin-top: auto;
-  margin-bottom: 20px;
-  /* writing-mode: vertical-rl; */
-  /* transform: rotate(180deg); */
-  opacity: 0.7;
-}
-
-.sidebar-upper span {
-  display: inline;
-  margin-left: 5px;
-  font-size: 10px;
-  vertical-align: middle;
-  color: #111010;
-}
-
-/* Shared gradient border box (Navbar + Sidebar) */
-.box {
-  width: 32px;
-  height: 32px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 8px;
-  border: 2px solid transparent;
-  box-sizing: border-box;
-
-  background:
-    linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
-
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.box img {
-  width: 18px;
-  height: 18px;
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 10px;
 }
 
 .sidebar-link {
   text-decoration: none;
-  color: inherit;
+  color: #666;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-.sidebar-item:hover .box {
-  transform: scale(1.05);
+.sidebar-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 24px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
-.sidebar-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+.sidebar-item span {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Icon container with gradient border */
+.box {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.box img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+/* Hover effects */
+.sidebar-link:hover .sidebar-item {
+  color: #1a1a1a;
+}
+
+.sidebar-link:hover .box {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Active State */
+.sidebar-link.active .sidebar-item {
+  color: #764ba2;
+}
+
+.sidebar-link.active .box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 8px 20px rgba(118, 75, 162, 0.3);
+  border: none;
+}
+
+.sidebar-link.active .box img {
+  filter: brightness(0) invert(1);
+}
+
+.sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background: linear-gradient(to bottom, #667eea, #764ba2);
+  border-radius: 0 4px 4px 0;
+}
+
+/* History section */
+.sidebar-history {
+  margin-top: auto;
+  margin-bottom: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.sidebar-history h3 {
+  font-size: 12px;
+  font-weight: 800;
+  color: #666;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  padding: 0 24px;
+  text-align: left;
 }

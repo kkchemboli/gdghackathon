@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import quiz_icon from '../../assets/quiz.png'
 import important_icon from '../../assets/important.png'
 import flascard_icon from '../../assets/flashcard.png'
+import Sidebar from '../../component/Sidebar/sidebar.jsx'
 
 const Pdf = () => {
   const [input, setInput] = useState('')
@@ -60,112 +61,115 @@ const Pdf = () => {
   }
 
   return (
-    <div className="pdf-container">
-      <div className="pdf-header">
-        <h1> EdTube PDF Learning</h1>
-      </div>
-      <span className="pdf-h2"><h2> Upload The PDF Document </h2></span>
+    <>
+      <Sidebar />
+      <div className="pdf-container">
+        <div className="pdf-header">
+          <h1> EdTube PDF Learning</h1>
+        </div>
+        <span className="pdf-h2"><h2> Upload The PDF Document </h2></span>
 
-      {/* File Upload Section */}
-      <div className="url-input-section">
-        <div className="input-group">
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={(e) => setInput(e.target.files)}
-            className="file-input"
-          />
-          <button className="process-btn" onClick={handleProcess}>
-            Upload
-          </button>
+        {/* File Upload Section */}
+        <div className="url-input-section">
+          <div className="input-group">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setInput(e.target.files)}
+              className="file-input"
+            />
+            <button className="process-btn" onClick={handleProcess}>
+              Upload
+            </button>
+          </div>
+
+          {/* Feature Icons on Right */}
         </div>
 
-        {/* Feature Icons on Right */}
-      </div>
-
-      <div className="icon-toolbar">
-        <div
-          className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('quiz')}
-          title="Quiz"
-        >
-          <img src={quiz_icon} alt="quiz icon" className="quiz-icon" />
-        </div>
-        <div
-          className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('flashcard')}
-          title="Flashcard"
-        >
-          <img src={flascard_icon} alt="flashcard icon" className="flashcard-icon" />
-        </div>
-        <div
-          className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('important')}
-          title="Important Topics"
-        >
-          <img src={important_icon} alt="important topics icon" className="important-icon" />
-        </div>
-      </div>
-
-      {/* Feature Output Display */}
-      {activeFeature && featureOutput && (
-        <div className="feature-output">
-          <button className="close-feature" onClick={() => { setActiveFeature(null); setFeatureOutput(''); }}>✕</button>
-          <div className="feature-content">
-            {featureOutput.split('\n').map((line, idx) => (
-              <div key={idx} className="output-line">{line}</div>
-            ))}
+        <div className="icon-toolbar">
+          <div
+            className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('quiz')}
+            title="Quiz"
+          >
+            <img src={quiz_icon} alt="quiz icon" className="quiz-icon" />
+          </div>
+          <div
+            className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('flashcard')}
+            title="Flashcard"
+          >
+            <img src={flascard_icon} alt="flashcard icon" className="flashcard-icon" />
+          </div>
+          <div
+            className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('important')}
+            title="Important Topics"
+          >
+            <img src={important_icon} alt="important topics icon" className="important-icon" />
           </div>
         </div>
-      )}
 
-      {/* PDF Viewer Section */}
-      {pdfUrl && (
-        <div className="pdf-viewer-section">
-          <h2>PDF Document</h2>
-          <embed
-            src={pdfUrl}
-            type="application/pdf"
-            width="100%"
-            height="600px"
-            style={{ borderRadius: '8px', marginTop: '20px' }}
-          />
-        </div>
-      )}
-
-      {/* Chat Box */}
-      <div className={`chat-box ${isChatOpen ? 'open' : 'closed'}`}>
-        <div className="chat-header" onClick={() => setIsChatOpen(!isChatOpen)}>
-          <span className="chat-toggle">💬</span>
-          <span className="chat-title">Ask Questions</span>
-        </div>
-
-        {isChatOpen && (
-          <div className="chat-content">
-            <div className="messages-container">
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.type}`}>
-                  {msg.text}
-                </div>
+        {/* Feature Output Display */}
+        {activeFeature && featureOutput && (
+          <div className="feature-output">
+            <button className="close-feature" onClick={() => { setActiveFeature(null); setFeatureOutput(''); }}>✕</button>
+            <div className="feature-content">
+              {featureOutput.split('\n').map((line, idx) => (
+                <div key={idx} className="output-line">{line}</div>
               ))}
-            </div>
-            <div className="chat-input-section">
-              <input
-                type="text"
-                className="chat-input"
-                placeholder="Ask a question about the PDF..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-              <button className="send-btn" onClick={handleSendMessage}>
-                Send
-              </button>
             </div>
           </div>
         )}
+
+        {/* PDF Viewer Section */}
+        {pdfUrl && (
+          <div className="pdf-viewer-section">
+            <h2>PDF Document</h2>
+            <embed
+              src={pdfUrl}
+              type="application/pdf"
+              width="100%"
+              height="600px"
+              style={{ borderRadius: '8px', marginTop: '20px' }}
+            />
+          </div>
+        )}
+
+        {/* Chat Box */}
+        <div className={`chat-box ${isChatOpen ? 'open' : 'closed'}`}>
+          <div className="chat-header" onClick={() => setIsChatOpen(!isChatOpen)}>
+            <span className="chat-toggle">💬</span>
+            <span className="chat-title">Ask Questions</span>
+          </div>
+
+          {isChatOpen && (
+            <div className="chat-content">
+              <div className="messages-container">
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`message ${msg.type}`}>
+                    {msg.text}
+                  </div>
+                ))}
+              </div>
+              <div className="chat-input-section">
+                <input
+                  type="text"
+                  className="chat-input"
+                  placeholder="Ask a question about the PDF..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                />
+                <button className="send-btn" onClick={handleSendMessage}>
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

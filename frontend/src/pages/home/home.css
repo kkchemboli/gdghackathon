@@ -52,7 +52,8 @@
   cursor: pointer;
   transition: transform 0.2s;
   box-shadow: 0 4px 15px rgba(124, 131, 253, 0.3);
-  text-decoration: none; /* Removed underline for Link */
+  text-decoration: none;
+  /* Removed underline for Link */
 }
 
 .btn-secondary {
@@ -69,10 +70,12 @@
   cursor: pointer;
   transition: transform 0.2s;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  text-decoration: none; /* Removed underline for Link */
+  text-decoration: none;
+  /* Removed underline for Link */
 }
 
-.btn-primary:hover, .btn-secondary:hover {
+.btn-primary:hover,
+.btn-secondary:hover {
   transform: translateY(-2px);
 }
 
@@ -157,7 +160,7 @@
   background: white;
   border-radius: 12px;
   /* Enhanced window shadow */
-  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   border: 1px solid #eee;
 }
@@ -181,9 +184,18 @@
   border-radius: 50%;
   background-color: #ddd;
 }
-.dots span:nth-child(1) { background-color: #ff5f56; }
-.dots span:nth-child(2) { background-color: #ffbd2e; }
-.dots span:nth-child(3) { background-color: #27c93f; }
+
+.dots span:nth-child(1) {
+  background-color: #ff5f56;
+}
+
+.dots span:nth-child(2) {
+  background-color: #ffbd2e;
+}
+
+.dots span:nth-child(3) {
+  background-color: #27c93f;
+}
 
 .address-bar {
   flex: 1;
@@ -193,7 +205,7 @@
   font-size: 12px;
   color: #666;
   text-align: center;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .window-content {
@@ -213,7 +225,7 @@
   .how-it-works-content {
     flex-direction: column;
   }
-  
+
   .home-main {
     margin-left: 0;
     padding-top: 100px;

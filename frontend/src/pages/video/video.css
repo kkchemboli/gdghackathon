@@ -260,8 +260,8 @@
 
 
 .video-container {
-  max-width: 1400px;
-  margin: 120px auto 40px;
+  margin-left: 240px;
+  margin-top: 80px;
   padding: 30px;
   text-align: center;
 }

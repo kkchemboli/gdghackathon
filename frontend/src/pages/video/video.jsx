@@ -9,6 +9,7 @@ import { Spinner } from '../../components/ui/spinner'
 import quiz_icon from '../../assets/quiz.png'
 import important_icon from '../../assets/important.png'
 import flascard_icon from '../../assets/flashcard.png'
+import Sidebar from '../../component/Sidebar/sidebar.jsx'
 
 const Video = () => {
   const [input, setInput] = useState('')
@@ -216,152 +217,155 @@ const Video = () => {
   }
 
   return (
-    <div className="video-container">
-      <div className="video-header">
-        <h1> EdTube Video Learning</h1>
-      </div>
-      <span className="video-h2"><h2> Insert The Video Url </h2></span>
-
-      {/* URL Bar Section */}
-      <div className="url-input-section">
-
-        {/* URL Input Container */}
-        <div className="url-card">
-          <input
-            className="url-input"
-            placeholder="Paste video URL here..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <div className="play-card">
-            <button className="process-btn" onClick={handleProcess}>
-              ▶ Play
-            </button>
-          </div>
+    <>
+      <Sidebar />
+      <div className="video-container">
+        <div className="video-header">
+          <h1> EdTube Video Learning</h1>
         </div>
+        <span className="video-h2"><h2> Insert The Video Url </h2></span>
 
-      </div>
+        {/* URL Bar Section */}
+        <div className="url-input-section">
 
-      <div className="features-card">
-        <div
-          className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('quiz')}
-          title="Quiz"
-        >
-          <img src={quiz_icon} alt="quiz" />
-        </div>
-
-        <div
-          className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('flashcard')}
-          title="Flashcard"
-        >
-          <img src={flascard_icon} alt="flashcard" />
-        </div>
-
-        <div
-          className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
-          onClick={() => handleFeatureClick('important')}
-          title="Important Topics"
-        >
-          <img src={important_icon} alt="important" />
-        </div>
-      </div>
-
-
-      {/* Progress Bar */}
-      {isProcessing && (
-        <div className="progress-container" style={{ maxWidth: '800px', margin: '20px auto', padding: '0 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span>{processingStatus}</span>
-            <span>{indexingProgress}%</span>
-          </div>
-          <progress value={indexingProgress} max="100" style={{ width: '100%', height: '24px' }}></progress>
-        </div>
-      )}
-
-      {/* Feature Output Display */}
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
-
-      {activeFeature && (
-        <div className="feature-output">
-          <button className="close-feature" onClick={() => { setActiveFeature(null); setFeatureOutput(''); setError(null); }}>✕</button>
-          {isLoading ? (
-            <div className="loading-spinner">Loading</div>
-
-          ) : (
-            <div className="feature-content">
-              {activeFeature === 'quiz' ? (
-                <QuizDisplay
-                  questions={featureOutput}
-                  onWrongAnswer={handleWrongAnswer}
-                  onCreateRevision={handleCreateRevision}
-                />
-              ) : activeFeature === 'revision' ? (
-                <div className="revision-container">
-                  <ReactMarkdown>{featureOutput}</ReactMarkdown>
-                  <div className="quiz-footer">
-                    <button className="revision-btn" onClick={handleMoreQuestions}>
-                      🔄 Attempt More Questions
-                    </button>
-                  </div>
-                </div>
-              ) : activeFeature === 'important' ? (
-                <iframe src={featureOutput} width="100%" height="600px" title="Important Topics PDF" style={{ border: 'none' }} />
-              ) : (
-                // For other features (text based)
-                typeof featureOutput === 'string' ? featureOutput.split('\n').map((line, idx) => (
-                  <div key={idx} className="output-line">{line}</div>
-                )) : JSON.stringify(featureOutput)
-              )}
+          {/* URL Input Container */}
+          <div className="url-card">
+            <input
+              className="url-input"
+              placeholder="Paste video URL here..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            <div className="play-card">
+              <button className="process-btn" onClick={handleProcess}>
+                ▶ Play
+              </button>
             </div>
-          )}
-        </div>
-      )}
-      {/* Video Player Section */}
-      {videoId && (
-        <div className="video-player-section">
-          <h2>Now Playing</h2>
-          <iframe
-            width="100%"
-            height="500"
-            src={`https://www.youtube.com/embed/${videoId}`}
-            title="YouTube video player"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ maxWidth: '900px', margin: '20px auto', display: 'block' }}
-          ></iframe>
-        </div>
-      )}
+          </div>
 
-
-
-      {/* Chat Box */}
-      <div className={`chat-box ${isChatOpen ? 'open' : 'closed'}`}>
-        <div className="chat-header" onClick={() => setIsChatOpen(!isChatOpen)}>
-          <span className="chat-toggle">💬</span>
-          <span className="chat-title">Ask Questions</span>
         </div>
 
-        <div className="chat-content-container" style={{ height: 'calc(100% - 60px)' }}>
-          <Chatbox
-            isOpen={isChatOpen}
-            key={videoId}
-            isProcessing={isProcessing}
-            userId={userId}
-            videoUrl={videoUrl}
-            conversationId={currentConversation?.id}
-            conversation={currentConversation}
-            onConversationChange={handleConversationChange}
-          />
+        <div className="features-card">
+          <div
+            className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('quiz')}
+            title="Quiz"
+          >
+            <img src={quiz_icon} alt="quiz" />
+          </div>
+
+          <div
+            className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('flashcard')}
+            title="Flashcard"
+          >
+            <img src={flascard_icon} alt="flashcard" />
+          </div>
+
+          <div
+            className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
+            onClick={() => handleFeatureClick('important')}
+            title="Important Topics"
+          >
+            <img src={important_icon} alt="important" />
+          </div>
+        </div>
+
+
+        {/* Progress Bar */}
+        {isProcessing && (
+          <div className="progress-container" style={{ maxWidth: '800px', margin: '20px auto', padding: '0 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span>{processingStatus}</span>
+              <span>{indexingProgress}%</span>
+            </div>
+            <progress value={indexingProgress} max="100" style={{ width: '100%', height: '24px' }}></progress>
+          </div>
+        )}
+
+        {/* Feature Output Display */}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+        {activeFeature && (
+          <div className="feature-output">
+            <button className="close-feature" onClick={() => { setActiveFeature(null); setFeatureOutput(''); setError(null); }}>✕</button>
+            {isLoading ? (
+              <div className="loading-spinner">Loading</div>
+
+            ) : (
+              <div className="feature-content">
+                {activeFeature === 'quiz' ? (
+                  <QuizDisplay
+                    questions={featureOutput}
+                    onWrongAnswer={handleWrongAnswer}
+                    onCreateRevision={handleCreateRevision}
+                  />
+                ) : activeFeature === 'revision' ? (
+                  <div className="revision-container">
+                    <ReactMarkdown>{featureOutput}</ReactMarkdown>
+                    <div className="quiz-footer">
+                      <button className="revision-btn" onClick={handleMoreQuestions}>
+                        🔄 Attempt More Questions
+                      </button>
+                    </div>
+                  </div>
+                ) : activeFeature === 'important' ? (
+                  <iframe src={featureOutput} width="100%" height="600px" title="Important Topics PDF" style={{ border: 'none' }} />
+                ) : (
+                  // For other features (text based)
+                  typeof featureOutput === 'string' ? featureOutput.split('\n').map((line, idx) => (
+                    <div key={idx} className="output-line">{line}</div>
+                  )) : JSON.stringify(featureOutput)
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {/* Video Player Section */}
+        {videoId && (
+          <div className="video-player-section">
+            <h2>Now Playing</h2>
+            <iframe
+              width="100%"
+              height="500"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ maxWidth: '900px', margin: '20px auto', display: 'block' }}
+            ></iframe>
+          </div>
+        )}
+
+
+
+        {/* Chat Box */}
+        <div className={`chat-box ${isChatOpen ? 'open' : 'closed'}`}>
+          <div className="chat-header" onClick={() => setIsChatOpen(!isChatOpen)}>
+            <span className="chat-toggle">💬</span>
+            <span className="chat-title">Ask Questions</span>
+          </div>
+
+          <div className="chat-content-container" style={{ height: 'calc(100% - 60px)' }}>
+            <Chatbox
+              isOpen={isChatOpen}
+              key={videoId}
+              isProcessing={isProcessing}
+              userId={userId}
+              videoUrl={videoUrl}
+              conversationId={currentConversation?.id}
+              conversation={currentConversation}
+              onConversationChange={handleConversationChange}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

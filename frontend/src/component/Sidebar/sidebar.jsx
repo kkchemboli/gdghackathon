@@ -1,6 +1,6 @@
 import React from 'react'
 import './sidebar.css'
-import video_icon from'../../assets/video.png'
+import video_icon from '../../assets/video.png'
 import pdf_icon from '../../assets/pdf.png'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -13,18 +13,18 @@ const Sidebar = () => {
 
         <Link to="/video" className={`sidebar-link ${location.pathname.includes('/video') ? 'active' : ''}`}>
           <div className="sidebar-item">
-             <div className="icon-box">
+            <div className="box">
               <img src={video_icon} alt="video icon" />
-             </div>
+            </div>
             <span>Video</span>
           </div>
         </Link>
 
         <Link to="/pdf" className={`sidebar-link ${location.pathname.includes('/pdf') ? 'active' : ''}`}>
           <div className="sidebar-item">
-             <div className="icon-box">
-               <img src={pdf_icon} alt="pdf icon" />
-             </div>
+            <div className="box">
+              <img src={pdf_icon} alt="pdf icon" />
+            </div>
             <span>PDF</span>
           </div>
         </Link>
