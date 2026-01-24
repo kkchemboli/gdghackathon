@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -16,6 +16,7 @@ class ConversationResponse(BaseModel):
     user_id: str
     video_url: str
     notes_url: Optional[str] = None
+    concepts: List[str] = []
     created_at: datetime
     updated_at: datetime
     title: Optional[str] = None

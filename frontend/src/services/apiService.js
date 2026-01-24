@@ -32,14 +32,12 @@ const apiRequest = async (url, options = {}) => {
 }
 
 // Quiz API
-export const fetchQuiz = async (videoId) => {
+export const fetchQuiz = async (videoId, userId = 'demo-user') => {
   try {
-    // The backend endpoint is /create_quiz and it likely expects the video content in the vector store
-    // which is populated by /video endpoint.
-    // The /create_quiz endpoint in main.py is a POST request and doesn't take arguments in the body,
-    // relying on the state in the backend service.
+    // The backend endpoint is /create_quiz and it now expects user_id
     const data = await apiRequest(`${PYTHON_API_BASE_URL}/create_quiz`, {
       method: 'POST',
+      body: JSON.stringify({ user_id: userId })
     })
     return data
   } catch (error) {
@@ -86,9 +84,9 @@ export const fetchFlashcards = async () => {
 }
 
 // Important Topics API
-export const fetchImportantTopics = async () => {
+export const fetchImportantTopics = async (videoId, userId = 'demo-user', conversationId) => {
   try {
-    const response = await fetch(`${PYTHON_API_BASE_URL}/important_notes`, {
+    const response = await fetch(`${PYTHON_API_BASE_URL}/important_notes?user_id=${userId}&conversation_id=${conversationId}`, {
       method: 'GET',
     })
     if (!response.ok) throw new Error('Failed to fetch important notes')

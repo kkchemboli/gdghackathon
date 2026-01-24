@@ -100,6 +100,10 @@ class QuizQuestion(BaseModel):
     timestamp: str
 
 
+class QuizRequest(BaseModel):
+    user_id: str
+
+
 class QuizResponse(BaseModel):
     questions: List[QuizQuestion]
 
@@ -118,9 +122,10 @@ async def load_video(request: VideoRequest):
 
         if existing_conversation:
             # Video already processed, use existing conversation but process video anyway
-            def video_processing_stream():
+            async def video_processing_stream():
                 import json
-
+                print(f"DEBUG: Processing existing video for conversation {existing_conversation.id}")
+                
                 # First, yield the existing conversation info
                 yield (
                     json.dumps(
@@ -137,6 +142,17 @@ async def load_video(request: VideoRequest):
                 # Then stream the video processing updates
                 # Pass user_id (request.id) to RAG
                 for chunk in load_youtube_video_stream(request.url, request.id):
+                    try:
+                        data = json.loads(chunk)
+                        if data.get("status") == "completed" and "concepts" in data:
+                            print(f"DEBUG: Saving {len(data['concepts'])} concepts for conversation {existing_conversation.id}")
+                            await conversation_service.update_conversation(
+                                conversation_id=existing_conversation.id,
+                                concepts=data["concepts"]
+                            )
+                            print(f"DEBUG: Successfully saved concepts.")
+                    except Exception as e:
+                        print(f"DEBUG: Error parsing chunk for concepts: {e}")
                     yield chunk
 
             return StreamingResponse(
@@ -152,8 +168,9 @@ async def load_video(request: VideoRequest):
         conversation = await conversation_service.create_conversation(conversation_data)
 
         # Create a generator that yields conversation info first, then processing
-        def video_processing_stream():
+        async def video_processing_stream():
             import json
+            print(f"DEBUG: Processing NEW video for conversation {conversation.id}")
 
             # First, yield the new conversation info
             yield (
@@ -171,6 +188,17 @@ async def load_video(request: VideoRequest):
             # Then stream the video processing updates
             # Pass user_id (request.id) to RAG
             for chunk in load_youtube_video_stream(request.url, request.id):
+                try:
+                    data = json.loads(chunk)
+                    if data.get("status") == "completed" and "concepts" in data:
+                        print(f"DEBUG: Saving {len(data['concepts'])} concepts for conversation {conversation.id}")
+                        await conversation_service.update_conversation(
+                            conversation_id=conversation.id,
+                            concepts=data["concepts"]
+                        )
+                        print(f"DEBUG: Successfully saved concepts.")
+                except Exception as e:
+                    print(f"DEBUG: Error parsing chunk for concepts: {e}")
                 yield chunk
 
         return StreamingResponse(
@@ -264,10 +292,10 @@ async def generate_revision_doc(request: RevisionRequest):
 
 
 @app.post("/create_quiz", response_model=QuizResponse)
-async def create_quiz_endpoint():
-    """Generate a quiz from the loaded video."""
+async def create_quiz_endpoint(request: QuizRequest):
+    """Generate a quiz from the loaded video for a specific user."""
     try:
-        questions_data = generate_quiz()
+        questions_data = generate_quiz(request.user_id)
         return QuizResponse(questions=questions_data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -283,7 +311,7 @@ async def learn_from_mistakes_endpoint(request: RevisionRequest):
     try:
         # Convert Pydantic models to list of dicts for the service
         mistakes_dicts = [m.dict() for m in request.mistakes]
-        questions_data = generate_remedial_quiz(mistakes_dicts)
+        questions_data = generate_remedial_quiz(mistakes_dicts, request.user_id)
         return QuizResponse(questions=questions_data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -359,12 +387,24 @@ async def get_conversation_messages(
 
 
 @app.get("/important_notes")
-async def get_important_notes():
+async def get_important_notes(user_id: str, conversation_id: str):
     """Generate and return important notes PDF."""
     try:
-        pdf_bytes = generate_important_notes_pdf()
+        print(f"DEBUG: get_important_notes called with user_id={user_id}, conversation_id={conversation_id}")
+        conversation = await conversation_service.get_conversation(conversation_id)
+        if not conversation:
+            print(f"DEBUG: Conversation {conversation_id} not found")
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        concepts = conversation.concepts
+        print(f"DEBUG: Found {len(concepts)} concepts: {concepts}")
+        pdf_bytes = generate_important_notes_pdf(user_id, concepts)
+        print(f"DEBUG: PDF generated successfully, size={len(pdf_bytes)}")
         return Response(content=pdf_bytes, media_type="application/pdf")
     except Exception as e:
+        print(f"ERROR in get_important_notes: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

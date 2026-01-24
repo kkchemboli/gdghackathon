@@ -7,6 +7,7 @@ from langchain_community.document_loaders import YoutubeLoader
 from langchain_community.document_loaders.youtube import TranscriptFormat
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+from typing import Optional, List
 
 load_dotenv()
 
@@ -23,51 +24,31 @@ else:
     print("Warning: GCP_PROJECT_ID not set. Vertex AI functionality will fail.")
 
 # Global variables
-# Use a very standard model name. If this fails, we might need to check if the project has access.
 model = GenerativeModel("gemini-2.5-flash")
-current_docs = []
-concepts_set = set()
 BATCH_SIZE = 10
+
+# Per-user in-memory state (Fallbacks for when DB isn't enough or for speed)
+# Ideally, transcripts are in Vertex RAG and concepts are in MongoDB.
+user_docs = {} # user_id -> List[Document]
 
 def get_or_create_corpus(user_id: str):
     """Get existing corpus for user or create a new one."""
     display_name = f"user-{user_id}"
-    
-    # List all corpora to find existing one
-    # Note: list_corpora returns an iterable
     try:
         corpora = rag.list_corpora()
         for corpus in corpora:
             if corpus.display_name == display_name:
-                print(f"Found existing corpus for user {user_id}: {corpus.name}")
                 return corpus
     except Exception as e:
         print(f"Error listing corpora: {e}")
-        
-    print(f"Creating new corpus for user {user_id}...")
     return rag.create_corpus(display_name=display_name)
 
 def purge_corpus_files(corpus_name: str):
     """Delete all files in the specified corpus."""
     try:
-        print(f"Purging files from corpus: {corpus_name}")
         files = list(rag.list_files(corpus_name=corpus_name))
-        count = 0
         for file in files:
-            print(f"Deleting file: {file.name} ({file.display_name})")
             rag.delete_file(name=file.name)
-            count += 1
-        print(f"Purged {count} files from corpus {corpus_name}")
-        
-        # Verify emptiness (optional, but good for debugging)
-        remaining = list(rag.list_files(corpus_name=corpus_name))
-        if remaining:
-            print(f"WARNING: {len(remaining)} files remain after purge!")
-            for f in remaining:
-                print(f"  - {f.name}")
-        else:
-             print("Corpus is now empty.")
-
     except Exception as e:
         print(f"Error purging corpus files: {e}")
 
@@ -83,35 +64,27 @@ Text:
 """
         response = model.generate_content(prompt)
         content = response.text.strip()
-        
-        # Clean markdown if present
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-            
+        if content.startswith("```json"): content = content[7:]
+        if content.startswith("```"): content = content[3:]
+        if content.endswith("```"): content = content[:-3]
         concepts = json.loads(content)
         return concepts if isinstance(concepts, list) else []
     except Exception as e:
         print(f"Error extracting concepts: {e}")
         return []
 
-def get_concepts() -> list:
-    """Return the current set of extracted concepts as a list."""
-    return list(concepts_set)
+def clear_vector_store(user_id: Optional[str] = None):
+    """Clear state for a specific user or all users if user_id is None."""
+    global user_docs
+    if user_id:
+        if user_id in user_docs:
+            del user_docs[user_id]
+    else:
+        user_docs = {}
 
-def clear_vector_store():
-    """Context clearing wrapper.
-    
-    For local globals, reset them.
-    Corpus clearing is handled during load_video.
-    """
-    global current_docs
-    current_docs = []
-    global concepts_set
-    concepts_set = set()
+def get_current_docs(user_id: str) -> list:
+    """Get the current documents for a user."""
+    return user_docs.get(user_id, [])
 
 def load_youtube_video_stream(url: str, user_id: str):
     """Load YouTube video transcript, process, and upload to Vertex RAG yielding progress."""
@@ -157,9 +130,8 @@ def load_youtube_video_stream(url: str, user_id: str):
         first_chunk_snippet = documents[0].page_content[:200]
         print(f"DEBUG: First transcript chunk: {first_chunk_snippet}")
 
-        # Update global current_docs for quiz.py
-        global current_docs
-        current_docs = documents
+        # Update user_docs for quiz.py
+        user_docs[user_id] = documents
 
         # Format transcript with timestamps for RAG
         yield json.dumps({"status": "progress", "message": "Processing transcript...", "progress": 20}) + "\n"
@@ -190,9 +162,8 @@ def load_youtube_video_stream(url: str, user_id: str):
         with open(temp_file_path, "w") as f:
             f.write(formatted_transcript)
             
-        # Extract Concepts (Parallelish)
-        global concepts_set
-        concepts_set = set()
+        # Extract Concepts
+        extracted_concepts = set()
         
         # We can do a quick concept extraction on a subset or full text
         # For progress bar niceness, let's do it in a loop
@@ -206,7 +177,7 @@ def load_youtube_video_stream(url: str, user_id: str):
         num_batches = len(text_chunks)
         for i, chunk in enumerate(text_chunks):
             batch_concepts = extract_concepts_batch(chunk)
-            concepts_set.update(batch_concepts)
+            extracted_concepts.update(batch_concepts)
             
             prog = 20 + int((i+1)/num_batches * 40) # 20 to 60
             yield json.dumps({
@@ -231,7 +202,12 @@ def load_youtube_video_stream(url: str, user_id: str):
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 
-            yield json.dumps({"status": "completed", "message": "Video processed successfully", "progress": 100}) + "\n"
+            yield json.dumps({
+                "status": "completed", 
+                "message": "Video processed successfully", 
+                "progress": 100,
+                "concepts": list(extracted_concepts)
+            }) + "\n"
             
         except Exception as e:
             yield json.dumps({"status": "error", "message": f"Vertex RAG Import failed: {str(e)}"}) + "\n"
@@ -294,20 +270,35 @@ USER QUESTION: {query}"""
         vertexai.init(project=PROJECT_ID, location=LOCATION)
         
         # Parse response
+        text = response.text.strip()
         try:
-            text = response.text.strip()
-            # Clean markdown
-            if text.startswith("```json"):
-                text = text[7:]
-            if text.startswith("```"):
-                text = text[3:]
-            if text.endswith("```"):
-                text = text[:-3]
+            # Clean markdown JSON block if present
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            # Simple JSON parse
+            try:
+                res_json = json.loads(text)
+                return res_json
+            except json.JSONDecodeError:
+                # If JSON parse fails, try to find "answer": "..." using regex
+                import re
+                # This regex looks for the content inside "answer": "..." even if JSON is malformed/truncated
+                answer_match = re.search(r'"answer":\s*"(.*?)"(?:\s*,|\s*})', text, re.DOTALL)
+                if answer_match:
+                    ans = answer_match.group(1).encode().decode('unicode_escape')
+                    return {"answer": ans, "timestamp": "00:00:00"}
                 
-            res_json = json.loads(text)
-            return res_json
+                # If that fails, maybe the LLM just returned the text directly despite the JSON request
+                if "###" in text or "**Timestamp:**" in text:
+                    return {"answer": text, "timestamp": "00:00:00"}
+                
+                raise # Go to fallback
+                
         except Exception:
-            # Fallback if not JSON
+            # Fallback if all extraction fails
             return {
                 "answer": response.text,
                 "timestamp": "00:00:00"

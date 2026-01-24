@@ -18,6 +18,7 @@ class AsyncConversationService:
             conversation_dict.update(
                 {
                     "notes_url": None,
+                    "concepts": [],
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow(),
                 }
@@ -86,21 +87,25 @@ class AsyncConversationService:
             raise Exception(f"Failed to get user conversations: {str(e)}")
 
     async def update_conversation(
-        self, conversation_id: str, notes_url: str
+        self, conversation_id: str, notes_url: Optional[str] = None, concepts: Optional[List[str]] = None
     ) -> Optional[ConversationResponse]:
-        """Update conversation with notes URL"""
+        """Update conversation with notes URL or concepts"""
         try:
             collection = mongodb_service.get_collection("conversations")
 
-            update_data = {
-                "$set": {"notes_url": notes_url, "updated_at": datetime.utcnow()}
-            }
+            update_fields = {"updated_at": datetime.utcnow()}
+            if notes_url is not None:
+                update_fields["notes_url"] = notes_url
+            if concepts is not None:
+                update_fields["concepts"] = concepts
+
+            update_data = {"$set": update_fields}
 
             result = await collection.update_one(
                 {"_id": ObjectId(conversation_id)}, update_data
             )
 
-            if result.modified_count > 0:
+            if result.modified_count > 0 or result.matched_count > 0:
                 return await self.get_conversation(conversation_id)
             return None
 

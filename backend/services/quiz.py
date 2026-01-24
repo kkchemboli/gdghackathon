@@ -2,14 +2,14 @@ import json
 from typing import List, Dict
 from services import rag
 
-def generate_quiz() -> List[Dict]:
+def generate_quiz(user_id: str) -> List[Dict]:
     """
-    Generates a quiz based on the content in the vector store.
+    Generates a quiz based on the content in the vector store for a specific user.
     Returns a list of dictionaries, where each dictionary represents a question.
     """
     try:
-        # Get all documents from the global in-memory store
-        documents = rag.current_docs
+        # Get all documents for the specific user from the in-memory store
+        documents = rag.get_current_docs(user_id)
 
         if not documents:
             raise ValueError("No video loaded. Please load a video first.")
@@ -91,13 +91,13 @@ Do not include any markdown formatting (like ```json), just the raw JSON string.
         # In case of error, ensuring we don't crash everything, but maybe re-raise tailored error
         raise ValueError(f"Failed to generate quiz: {str(e)}")
 
-def generate_remedial_quiz(mistakes: List[Dict]) -> List[Dict]:
+def generate_remedial_quiz(mistakes: List[Dict], user_id: str) -> List[Dict]:
     """
     Generates a remedial quiz based on the user's mistakes.
     """
     try:
         if not mistakes:
-            return generate_quiz() # Fallback to generic quiz if no mistakes provided (though logic should prevent this call)
+            return generate_quiz(user_id) # Fallback to generic quiz if no mistakes provided
             
         mistakes_context = "\n".join([f"- Question: {m.get('question')}\n  Correct Answer: {m.get('correct_option')}" for m in mistakes])
 

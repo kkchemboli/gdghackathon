@@ -114,7 +114,7 @@ const Video = () => {
       let data
       switch (feature) {
         case 'quiz':
-          data = await fetchQuiz(videoId)
+          data = await fetchQuiz(videoId, userId)
           // Don't format quiz output as string, keep it as object/array for the component
           setFeatureOutput(data.questions)
           break
@@ -123,7 +123,7 @@ const Video = () => {
           setFeatureOutput(formatFlashcardOutput(data))
           break
         case 'important':
-          data = await fetchImportantTopics(videoId)
+          data = await fetchImportantTopics(videoId, userId, currentConversation?.id)
           setFeatureOutput(URL.createObjectURL(data))
           break
         default:
