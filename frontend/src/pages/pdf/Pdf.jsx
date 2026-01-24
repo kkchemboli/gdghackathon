@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import './pdf.css'
 import { Link } from 'react-router-dom'
+import quiz_icon from '../../assets/quiz.png'
+import important_icon from '../../assets/important.png'
+import flascard_icon from '../../assets/flashcard.png'
 
 const Pdf = () => {
   const [input, setInput] = useState('')
@@ -41,7 +44,7 @@ const Pdf = () => {
 
   const handleFeatureClick = (feature) => {
     setActiveFeature(feature)
-    switch(feature) {
+    switch (feature) {
       case 'quiz':
         setFeatureOutput(`📋 Quiz Questions:\n\n1. What is the main topic?\n2. Explain the concept\n3. Apply the learning\n\nClick to attempt the quiz!`)
         break
@@ -59,10 +62,9 @@ const Pdf = () => {
   return (
     <div className="pdf-container">
       <div className="pdf-header">
-        <Link to="/video" className="back-btn">←</Link>
-        <h1>📄 EdTube PDF Learning</h1>
-        <div className="forward-btn">→</div>
+        <h1> EdTube PDF Learning</h1>
       </div>
+      <span className="pdf-h2"><h2> Upload The PDF Document </h2></span>
 
       {/* File Upload Section */}
       <div className="url-input-section">
@@ -74,33 +76,34 @@ const Pdf = () => {
             className="file-input"
           />
           <button className="process-btn" onClick={handleProcess}>
-            📤 Upload
+            Upload
           </button>
         </div>
 
         {/* Feature Icons on Right */}
-        <div className="icon-toolbar">
-          <div 
-            className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('quiz')}
-            title="Quiz"
-          >
-            ❓
-          </div>
-          <div 
-            className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('flashcard')}
-            title="Flashcard"
-          >
-            🎴
-          </div>
-          <div 
-            className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('important')}
-            title="Important Topics"
-          >
-            ⭐
-          </div>
+      </div>
+
+      <div className="icon-toolbar">
+        <div
+          className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('quiz')}
+          title="Quiz"
+        >
+          <img src={quiz_icon} alt="quiz icon" className="quiz-icon" />
+        </div>
+        <div
+          className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('flashcard')}
+          title="Flashcard"
+        >
+          <img src={flascard_icon} alt="flashcard icon" className="flashcard-icon" />
+        </div>
+        <div
+          className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('important')}
+          title="Important Topics"
+        >
+          <img src={important_icon} alt="important topics icon" className="important-icon" />
         </div>
       </div>
 

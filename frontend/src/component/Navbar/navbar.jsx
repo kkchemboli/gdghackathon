@@ -1,22 +1,41 @@
 import './navbar.css'
-import DialpadIcon from '@/components/ui/dialpad-icon'
-import DotsHorizontalIcon from '@/components/ui/dots-horizontal-icon'
-import UserIcon from '@/components/ui/user-icon'
+import menu_icon from '../../assets/menu.png'
+import more_icon from '../../assets/more.png'
+import profile_icon from '../../assets/profile.png'
+import home_icon from '../../assets/home.png'
+import { Link } from 'react-router-dom'
 
 
 const Navbar = () => {
   return (
     <nav className="nav-flex">
       <div className="nav-left">
-        <DialpadIcon className="menu-icon" />
+        <h1>EdTube</h1>
+        {/* <img src={menu_icon} alt="menu icon" className="menu-icon"/> */}
       </div>
 
       <div className="nav-center">
-        <h1>EdTube</h1>
+        {/* <img src={home_icon} alt="home icon" class="home-icon"/> */}
       </div>
+
       <div className="nav-right">
-        <DotsHorizontalIcon className="more-icon" /><span>MORE</span>
-        <UserIcon className="profile-icon" /><span>SIGN-IN</span>
+        <Link to="/" className="sidebar-link">
+          <div className="sidebar-item">
+            <div className="box">
+              <img src={home_icon} alt="home icon" />
+            </div>
+            <span>HOME</span>
+          </div>
+        </Link>
+        <div className="box">
+          <img src={more_icon} alt="more icon" className="more-icon" />
+        </div>
+        <span>MORE</span>
+
+        <div className="box">
+          <img src={profile_icon} alt="profile icon" className="profile-icon" />
+        </div>
+        <span>SIGN-IN</span>
       </div>
     </nav>
   )

@@ -6,6 +6,9 @@ import ReactMarkdown from 'react-markdown'
 import { fetchQuiz, fetchFlashcards, fetchImportantTopics, processVideo, createRevisionDoc, learnFromMistakes } from '../../services/apiService'
 import Chatbox from '../../components/Chatbox'
 import { Spinner } from '../../components/ui/spinner'
+import quiz_icon from '../../assets/quiz.png'
+import important_icon from '../../assets/important.png'
+import flascard_icon from '../../assets/flashcard.png'
 
 const Video = () => {
   const [input, setInput] = useState('')
@@ -16,7 +19,7 @@ const Video = () => {
   const [featureOutput, setFeatureOutput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-const [wrongAnswers, setWrongAnswers] = useState([]) // Track wrong answers for revision
+  const [wrongAnswers, setWrongAnswers] = useState([]) // Track wrong answers for revision
 
   // New state for progress tracking
   const [isProcessing, setIsProcessing] = useState(false)
@@ -27,7 +30,7 @@ const [wrongAnswers, setWrongAnswers] = useState([]) // Track wrong answers for 
   const [currentConversation, setCurrentConversation] = useState(null)
   const [userId] = useState('demo-user') // In a real app, this would come from auth
 
-const handleProcess = async () => {
+  const handleProcess = async () => {
     if (!input) return;
     setVideoUrl(input)
     // Extract video ID from URL (example: YouTube video ID)
@@ -58,7 +61,7 @@ const handleProcess = async () => {
           console.log('Video page - About to set conversation:', newConversation)
           setCurrentConversation(newConversation)
           console.log('Video page - Conversation set immediately:', newConversation)
-          
+
           // Update status message based on conversation status
           if (data.status === 'existing_conversation') {
             setProcessingStatus('Using existing conversation, reprocessing video...')
@@ -67,10 +70,10 @@ const handleProcess = async () => {
           }
         }
       }, userId)
-      
+
       console.log('Video processed successfully', result)
       setProcessingStatus('Indexing complete!')
-      
+
       // Ensure conversation is set even if we didn't capture it from stream
       if (result.conversationId && !currentConversation) {
         const newConversation = {
@@ -182,7 +185,7 @@ const handleProcess = async () => {
     }
   }
 
-const handleMoreQuestions = async () => {
+  const handleMoreQuestions = async () => {
     setIsLoading(true);
     try {
       let data;
@@ -215,50 +218,56 @@ const handleMoreQuestions = async () => {
   return (
     <div className="video-container">
       <div className="video-header">
-        <Link to="/" className="back-btn">←</Link>
-        <h1>🎥 EdTube Video Learning</h1>
-        <Link to="/video/:categoryId/:videoId" className="forward-btn">→</Link>
+        <h1> EdTube Video Learning</h1>
       </div>
+      <span className="video-h2"><h2> Insert The Video Url </h2></span>
 
       {/* URL Bar Section */}
       <div className="url-input-section">
-        <div className="input-group">
+
+        {/* URL Input Container */}
+        <div className="url-card">
           <input
             className="url-input"
             placeholder="Paste video URL here..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
-          <button className="process-btn" onClick={handleProcess}>
-            ▶ Play
-          </button>
+          <div className="play-card">
+            <button className="process-btn" onClick={handleProcess}>
+              ▶ Play
+            </button>
+          </div>
         </div>
 
-        {/* Feature Icons on Right */}
-        <div className="icon-toolbar">
-          <div
-            className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('quiz')}
-            title="Quiz"
-          >
-            ❓
-          </div>
-          <div
-            className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('flashcard')}
-            title="Flashcard"
-          >
-            🎴
-          </div>
-          <div
-            className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
-            onClick={() => handleFeatureClick('important')}
-            title="Important Topics"
-          >
-            ⭐
-          </div>
+      </div>
+
+      <div className="features-card">
+        <div
+          className={`icon-btn ${activeFeature === 'quiz' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('quiz')}
+          title="Quiz"
+        >
+          <img src={quiz_icon} alt="quiz" />
+        </div>
+
+        <div
+          className={`icon-btn ${activeFeature === 'flashcard' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('flashcard')}
+          title="Flashcard"
+        >
+          <img src={flascard_icon} alt="flashcard" />
+        </div>
+
+        <div
+          className={`icon-btn ${activeFeature === 'important' ? 'active' : ''}`}
+          onClick={() => handleFeatureClick('important')}
+          title="Important Topics"
+        >
+          <img src={important_icon} alt="important" />
         </div>
       </div>
+
 
       {/* Progress Bar */}
       {isProcessing && (
@@ -282,10 +291,8 @@ const handleMoreQuestions = async () => {
         <div className="feature-output">
           <button className="close-feature" onClick={() => { setActiveFeature(null); setFeatureOutput(''); setError(null); }}>✕</button>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-8 gap-2">
-              <Spinner size="lg" />
-              <p className="text-muted-foreground">Loading...</p>
-            </div>
+            <div className="loading-spinner">Loading</div>
+
           ) : (
             <div className="feature-content">
               {activeFeature === 'quiz' ? (
@@ -315,7 +322,6 @@ const handleMoreQuestions = async () => {
           )}
         </div>
       )}
-
       {/* Video Player Section */}
       {videoId && (
         <div className="video-player-section">
@@ -333,6 +339,8 @@ const handleMoreQuestions = async () => {
         </div>
       )}
 
+
+
       {/* Chat Box */}
       <div className={`chat-box ${isChatOpen ? 'open' : 'closed'}`}>
         <div className="chat-header" onClick={() => setIsChatOpen(!isChatOpen)}>
@@ -340,10 +348,10 @@ const handleMoreQuestions = async () => {
           <span className="chat-title">Ask Questions</span>
         </div>
 
-<div className="chat-content-container" style={{ height: 'calc(100% - 60px)' }}>
-          <Chatbox 
-            isOpen={isChatOpen} 
-            key={videoId} 
+        <div className="chat-content-container" style={{ height: 'calc(100% - 60px)' }}>
+          <Chatbox
+            isOpen={isChatOpen}
+            key={videoId}
             isProcessing={isProcessing}
             userId={userId}
             videoUrl={videoUrl}

@@ -5,9 +5,9 @@
 
   height: 100px;
   padding: 0 20px;
-
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background-color: #fbfafa;
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 0 0 1 0;
 
   position: fixed;
   top: 0;
@@ -19,56 +19,69 @@
 
 
 .nav-left .menu-icon {
-   width: 32px;
+  width: 32px;
   height: 32px;
-   transition: transform 0.2s ease, opacity 0.2s ease;
-   display: inline-block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  display: inline-block;
 }
+
 .nav-left .menu-icon:hover {
   transform: scale(1.1);
   opacity: 0.8;
 }
-.nav-left .home-icon {
-  width: 32px;
-  height: 32px;
-  margin-left: 20px;
-   transition: transform 0.2s ease, opacity 0.2s ease;
+
+.nav-left h1 {
+  color: rgb(4, 4, 4);
+  font-size: 24px;
+  margin: 0;
 
 }
+
 .nav-left .home-icon:hover {
   transform: scale(1.1);
   opacity: 0.8;
 }
 
-.nav-center input {
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 300px;
+.nav-center h1 {
+  color: white;
+  font-size: 24px;
+  margin: 0;
 }
+
 .nav-right {
   display: flex;
   align-items: center;
   gap: 20px;
 }
-.nav-right  .more-icon{
- width: 32px;
-  height: 32px;
-   transition: transform 0.2s ease, opacity 0.2s ease;
 
+.nav-right .more-icon .box {
+  width: 32px;
+  height: 32px;
+
+  border-radius: 8px;
+  border: 2px solid transparent;
+
+  background:
+    linear-gradient(#0000, #0000) padding-box,
+    linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
+
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
+
 .nav-right .more-icon:hover {
   transform: scale(1.1);
   opacity: 0.8;
 }
+
 .nav-right .profile-icon {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background-color: #6c757d;
-   transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 
 }
+
 .nav-right .profile-icon:hover {
   transform: scale(1.1);
   opacity: 0.8;
@@ -76,6 +89,7 @@
 
 .nav-left span,
 .nav-right span {
+  color: rgb(10, 10, 10);
   display: inline;
   margin-left: 5px;
   font-size: 12px;
@@ -83,4 +97,29 @@
 }
 
 
+.nav-right .box {
+  width: 32px;
+  height: 32px;
 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+  border: 2px solid transparent;
+
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, #667eea, #764ba2) border-box;
+
+  box-sizing: border-box;
+}
+
+.nav-right .box img {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-right .box:hover {
+  transform: scale(1.05);
+}

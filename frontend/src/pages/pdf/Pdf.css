@@ -18,7 +18,8 @@
   gap: 30px;
 }
 
-.back-btn, .forward-btn {
+.back-btn,
+.forward-btn {
   position: absolute;
   display: inline-flex;
   width: 45px;
@@ -44,7 +45,8 @@
   right: 0;
 }
 
-.back-btn:hover, .forward-btn:hover {
+.back-btn:hover,
+.forward-btn:hover {
   background-color: #667eea;
   color: white;
   transform: scale(1.15);
@@ -52,11 +54,28 @@
 }
 
 .pdf-header h1 {
-  font-size: 32px;
-  color: #1a237e;
-  margin: 0;
+  font-size: 60px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  display: block;
+  /* important */
+  text-align: center;
+  /* centers text */
+}
+
+.pdf-h2 h2 {
+  font-size: 40px;
+  font-weight: bold;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
 }
 
 /* URL Input Section */
@@ -97,11 +116,9 @@
 
 .icon-toolbar {
   display: flex;
-  gap: 15px;
-  padding: 12px 20px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 40px;
 }
 
 .icon-btn {
@@ -131,6 +148,14 @@
   color: white;
   border-color: #667eea;
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.quiz-icon,
+.flashcard-icon,
+.important-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .process-btn {
@@ -173,6 +198,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -278,8 +304,15 @@
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .chat-title {
@@ -322,6 +355,7 @@
     opacity: 0;
     transform: translateY(5px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
