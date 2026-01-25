@@ -18,7 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Query
 from contextlib import asynccontextmanager
 
-origins = ["http://localhost", "http://localhost:3000", "http://localhost:5173"]
+origins = ["http://localhost", "http://localhost:3000", "http://localhost:5173","https://frabjous-basbousa-c6ffc6.netlify.app/"]
+
 
 
 @asynccontextmanager
