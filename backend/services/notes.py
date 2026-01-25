@@ -37,7 +37,7 @@ async def generate_important_notes_pdf(user_id: str, concepts: list):
         f"IMPORTANT: Return ONLY the formatted text. DO NOT wrap the output in JSON or code blocks.\n\n"
         f"Concepts: {concepts_list}"
     )
-    print(f"DEBUG: Querying RAG with: {query[:100]}...")
+    print(f"DEBUG: Querying RAG with: {query}...")
     
     try:
         result = await query_video(query, user_id)
