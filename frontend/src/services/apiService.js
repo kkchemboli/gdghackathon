@@ -1,6 +1,6 @@
 // API Service for EdTube Features - Python Backend Compatible
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-const PYTHON_API_BASE_URL = 'http://localhost:8000'
+
+const PYTHON_API_BASE_URL = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000'
 
 // Helper function for API requests
 const apiRequest = async (url, options = {}) => {

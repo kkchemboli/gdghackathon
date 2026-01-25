@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import './pdf.css'
+import './Pdf.css'
 import { Link } from 'react-router-dom'
 import quiz_icon from '../../assets/quiz.png'
 import important_icon from '../../assets/important.png'
