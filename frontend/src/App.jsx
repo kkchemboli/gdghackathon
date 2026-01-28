@@ -1,41 +1,60 @@
-import React from 'react'
-import Navbar from './component/Navbar/navbar.jsx'
-import { Routes, Route } from 'react-router-dom'
-import Home from './pages/home/home.jsx'
-import Video from './pages/video/video.jsx'
-import Pdf from './pages/pdf/Pdf.jsx'
-import { createBrowserRouter ,RouterProvider } from 'react-router-dom'
+import React from 'react';
+import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
+import Navbar from './component/Navbar/navbar.jsx';
+import Home from './pages/home/home.jsx';
+import Video from './pages/video/video.jsx';
+import Pdf from './pages/pdf/Pdf.jsx';
+import LoginPage from './LoginPage';
+import ProtectedRoute from './ProtectedRoute';
+import { useAuth } from './AuthContext';
+
+const AppLayout = () => {
+  const { isAuthenticated } = useAuth();
+  return (
+    <>
+      {isAuthenticated && <Navbar />}
+      <Outlet />
+    </>
+  );
+};
 
 const App = () => {
-
   const router = createBrowserRouter([
     {
-      path : "/",
-      element: <><Navbar/><Home/></>,
+      path: '/',
+      element: <AppLayout />,
+      children: [
+        {
+          path: 'login',
+          element: <LoginPage />,
+        },
+        {
+          path: '/',
+          element: <ProtectedRoute />,
+          children: [
+            {
+              path: '/',
+              element: <Home />,
+            },
+            {
+              path: 'video',
+              element: <Video />,
+            },
+            {
+              path: 'pdf',
+              element: <Pdf />,
+            },
+            {
+              path: 'video/:categoryId/:videoId',
+              element: <Pdf />,
+            },
+          ],
+        },
+      ],
     },
-    {
-      path : "/video",
-      element: <><Navbar/><Video/></>,
-
-    },
-    
-     {
-      path: "/pdf",
-      element: <><Navbar/><Pdf/></>
-    },
-
-    {
-      path : "/video/:categoryId/:videoId",
-      element: <><Navbar/><Pdf/></>,
-
-    }
   ]);
 
+  return <RouterProvider router={router} />;
+};
 
-  return (
-
-    <RouterProvider router={router} />
-  )
-}
-
-export default App
+export default App;

@@ -30,6 +30,8 @@ dependencies = [
     "httpx>=0.28.1",
     "google-cloud-aiplatform>=1.134.0",
     "cloudpickle==3.1.2",
+    "google-auth>=2.29.0",
+    "python-jose[cryptography]>=3.3.0",
 ]
 
 [tool.setuptools.packages.find]

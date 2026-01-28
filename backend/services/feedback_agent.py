@@ -12,14 +12,15 @@ from google.adk.tools.preload_memory_tool import PreloadMemoryTool
 from google.genai import types
 from services.database import mongodb_service
 
+
 class FeedbackAgent:
     def __init__(self):
         self.project = os.getenv("GCP_PROJECT_ID")
         self.location = os.getenv("GCP_LOCATION", "us-central1")
-        
+
         if self.project:
             vertexai.init(project=self.project, location=self.location)
-            
+
         # Initialize Agent Engine
         try:
             # Try to get existing or create
@@ -27,13 +28,15 @@ class FeedbackAgent:
             self.agent_engine = agent_engines.create()
             print(f"Created Agent Engine: {self.agent_engine.resource_name}")
         except Exception as e:
-            print(f"Note: Agent Engine creation might have failed or already exists: {e}")
+            print(
+                f"Note: Agent Engine creation might have failed or already exists: {e}"
+            )
             # Fallback or assume it's handled by environment
             self.agent_engine = None
 
-        self.model_name = "gemini-2.5-pro"
+        self.model_name = "gemini-1.5-pro"
         self.app_name = "feedback_assistant_" + str(uuid.uuid4())[:6]
-        
+
         # Define ADK Agent
         self.agent = adk.Agent(
             model=self.model_name,
@@ -49,13 +52,17 @@ class FeedbackAgent:
 
         # Configure services
         agent_engine_id = self.agent_engine.name if self.agent_engine else "default"
-        
+
         self.memory_bank_service = VertexAiMemoryBankService(
-            project=self.project, location=self.location, agent_engine_id=agent_engine_id
+            project=self.project,
+            location=self.location,
+            agent_engine_id=agent_engine_id,
         )
 
         self.session_service = VertexAiSessionService(
-            project=self.project, location=self.location, agent_engine_id=agent_engine_id
+            project=self.project,
+            location=self.location,
+            agent_engine_id=agent_engine_id,
         )
 
         self.runner = adk.Runner(
@@ -92,33 +99,33 @@ Output only a JSON object with:
     async def process_feedback(self, user_id: str, feedback_text: str):
         """Classify and potentially store user feedback in Memory Bank."""
         print(f"DEBUG: Processing feedback for user {user_id}: {feedback_text}")
-        
+
         try:
             # Classification call using standard GenerativeModel for internal decision
             model = GenerativeModel(self.model_name)
-            prompt = f"{self.classification_prompt}\n\nUser Feedback: \"{feedback_text}\""
+            prompt = f'{self.classification_prompt}\n\nUser Feedback: "{feedback_text}"'
             response = model.generate_content(prompt)
-            
+
             # Parse LLM response
             raw_text = response.text.strip()
             if "```json" in raw_text:
                 raw_text = raw_text.split("```json")[1].split("```")[0].strip()
             elif "```" in raw_text:
                 raw_text = raw_text.split("```")[1].split("```")[0].strip()
-            
+
             result = json.loads(raw_text)
-            
+
             if result.get("worth_remembering"):
                 summary = result.get("preference_summary", feedback_text)
                 print(f"DEBUG: Feedback worth remembering: {summary}")
-                
+
                 # ADK memory storage process:
                 # 1. Create a session
                 session = await self.runner.session_service.create_session(
                     app_name=self.app_name,
                     user_id=user_id,
                 )
-                
+
                 # 2. Add the preference to the session history via a call
                 # This ensures the memory generation process has context.
                 async for event in self.runner.run_async(
@@ -126,47 +133,55 @@ Output only a JSON object with:
                     session_id=session.id,
                     new_message=types.Content(
                         role="user",
-                        parts=[types.Part(text=f"Please note this preference: {summary}")]
+                        parts=[
+                            types.Part(text=f"Please note this preference: {summary}")
+                        ],
                     ),
                 ):
                     pass
-                
+
                 # 3. Retrieve the session and add it to the Memory Bank
                 completed_session = await self.runner.session_service.get_session(
                     app_name=self.app_name, user_id=user_id, session_id=session.id
                 )
-                await self.memory_bank_service.add_session_to_memory(completed_session)
-                
+                if completed_session:
+                    await self.memory_bank_service.add_session_to_memory(
+                        completed_session
+                    )
+
                 # Store in MongoDB as a backup/quick cache
-                await mongodb_service.db.user_memories.update_one(
+                user_memories_collection = mongodb_service.get_collection(
+                    "user_memories"
+                )
+                await user_memories_collection.update_one(
                     {"user_id": user_id},
                     {"$addToSet": {"memories": summary}},
-                    upsert=True
+                    upsert=True,
                 )
-                
+
                 return True, f"Memory stored: {summary}"
             else:
                 print("DEBUG: Feedback ignored (not worth remembering)")
                 return False, "Feedback acknowledged but not stored as a preference."
-                
+
         except Exception as e:
             print(f"ERROR in FeedbackAgent: {str(e)}")
             return False, f"Error processing feedback: {str(e)}"
 
     async def get_user_memories(self, user_id: str) -> str:
         """Retrieve stored memories for prompt injection."""
-        # Using MongoDB as a reliable local cache for now, 
-        # but we could also search the memory bank:
-        # results = await self.memory_bank_service.search_memory(user_id=user_id, query="preferences")
-        
         try:
-            user_data = await mongodb_service.db.user_memories.find_one({"user_id": user_id})
+            user_memories_collection = mongodb_service.get_collection("user_memories")
+            user_data = await user_memories_collection.find_one({"user_id": user_id})
             if user_data and "memories" in user_data and user_data["memories"]:
                 memories_list = user_data["memories"]
-                return "Known User Preferences & Context:\n" + "\n".join([f"- {m}" for m in memories_list])
+                return "Known User Preferences & Context:\n" + "\n".join(
+                    [f"- {m}" for m in memories_list]
+                )
             return ""
         except Exception as e:
             print(f"ERROR retrieving memories: {e}")
             return ""
+
 
 feedback_agent = FeedbackAgent()

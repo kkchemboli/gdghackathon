@@ -1,77 +1,89 @@
-from services.database import mongodb_service
-from models.user import User, UserCreate
 from pymongo.errors import DuplicateKeyError
 from typing import Optional
 from bson import ObjectId
+from models.user import User, UserCreate, UserInDB
+from services.database import mongodb_service
 
 
-class AsyncUserService:
-    async def create_user(self, user_data: UserCreate) -> User:
-        """Create a new user"""
+class UserService:
+    async def get_user_by_email(self, email: str) -> Optional[UserInDB]:
+        """Get user by email"""
+        collection = mongodb_service.get_collection("users")
+        user_data = await collection.find_one({"email": email})
+        if user_data:
+            return UserInDB(**user_data)
+        return None
+
+    async def get_or_create_user_from_google(self, google_user_info: dict) -> UserInDB:
+        """
+        Finds a user by email or creates a new one if they don't exist,
+        using information from a verified Google ID token.
+        """
+        user_email = google_user_info.get("email")
+        print(f"DEBUG: Getting or creating user for email: {user_email}")
+        if not user_email:
+            print("ERROR: Email not found in Google user info")
+            raise ValueError("Email not found in Google user info")
+
+        existing_user = await self.get_user_by_email(user_email)
+        if existing_user:
+            print(f"DEBUG: Found existing user: {existing_user.id}")
+            # Optionally, update user's full_name and picture_url here if they've changed
+            return existing_user
+
+        # Create a new user if they don't exist
+        print("DEBUG: No existing user found. Creating new user.")
+        new_user_data = UserCreate(
+            email=user_email,
+            full_name=google_user_info.get("name"),
+            picture_url=google_user_info.get("picture"),
+        )
+
+        collection = mongodb_service.get_collection("users")
+        user_dict = new_user_data.model_dump(by_alias=True)
+
         try:
-            collection = mongodb_service.get_collection("users")
-
-            # Check if user already exists by email
-            print(f"DEBUG: Searching for user with email: {user_data.email}")
-            existing_user = await collection.find_one({"email": str(user_data.email)})
-            print(existing_user)
-            if existing_user is not None:
-                print(f"DEBUG: Found existing user: {existing_user}")
-                raise ValueError(f"User with email {user_data.email} already exists")
-
-            # Insert new user - MongoDB will generate _id automatically
-            user_dict = user_data.dict()
             result = await collection.insert_one(user_dict)
-
-            # Return created user with string _id
-            created_user = await collection.find_one({"_id": result.inserted_id})
-            if created_user:
-                created_user["_id"] = str(created_user["_id"])
-                return User(**created_user)
+            print(f"DEBUG: New user inserted with ID: {result.inserted_id}")
+        except DuplicateKeyError:
+            print(f"DEBUG: Race condition handled. User {user_email} already exists.")
+            # The user was created by another request between the find and insert calls.
+            # We can now safely retrieve the user that was just created.
+            existing_user = await self.get_user_by_email(user_email)
+            if existing_user:
+                return existing_user
             else:
-                raise Exception("Failed to retrieve created user")
+                # This is a very unlikely scenario, but we should handle it.
+                raise ValueError(
+                    "Could not create or retrieve user after race condition."
+                )
 
-        except DuplicateKeyError as e:
-            print(e)
-            raise ValueError(f" Dup: User with email {user_data.email} already exists")
-        except ValueError:
-            raise   # 👈 do NOT wrap it
-        except Exception as e:
-            raise Exception(f"Failed to create user: {str(e)}")
+        created_user = await collection.find_one({"_id": result.inserted_id})
+        if created_user:
+            print("DEBUG: Successfully retrieved created user from DB.")
+            return UserInDB.model_validate(created_user)
 
-    async def get_user(self, id: str) -> Optional[User]:
+        print("ERROR: Failed to retrieve created user after insertion.")
+        raise ValueError("Could not create user")
+
+    async def get_user(self, id: str) -> Optional[UserInDB]:
         """Get user by MongoDB _id"""
         try:
             from bson.errors import InvalidId
+
             try:
                 object_id = ObjectId(id)
             except InvalidId:
                 return None
-                
+
             collection = mongodb_service.get_collection("users")
             user = await collection.find_one({"_id": object_id})
-
             if user:
-                user["_id"] = str(user["_id"])
-                return User(**user)
+                return UserInDB(**user)
             return None
-
         except Exception as e:
             raise Exception(f"Failed to get user: {str(e)}")
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email"""
-        try:
-            collection = mongodb_service.get_collection("users")
-            user = await collection.find_one({"email": email})
 
-            if user:
-                user["_id"] = str(user["_id"])
-                return User(**user)
-            return None
-
-        except Exception as e:
-            raise Exception(f"Failed to get user by email: {str(e)}")
-
-
-user_service = AsyncUserService()
+# Singleton instance of the user service
+user_service = UserService()

@@ -40,9 +40,10 @@ class AsyncMongoDBService:
             raise RuntimeError("Database not connected")
 
         try:
-            # Users collection indexes - no unique index on user_id anymore
+            # Users collection indexes
             users_collection = self.db.users
-            # MongoDB _id is automatically unique, no additional indexes needed
+            await users_collection.create_index("email", unique=True)
+            print("Created unique index on user email.")
 
             # Conversations collection indexes
             conversations_collection = self.db.conversations
