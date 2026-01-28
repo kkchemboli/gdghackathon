@@ -21,26 +21,14 @@ class FeedbackAgent:
         if self.project:
             vertexai.init(project=self.project, location=self.location)
 
-        # Initialize Agent Engine
-        try:
-            # Try to get existing or create
-            # In a real scenario, we might want to store the resource name
-            self.agent_engine = agent_engines.create()
-            print(f"Created Agent Engine: {self.agent_engine.resource_name}")
-        except Exception as e:
-            print(
-                f"Note: Agent Engine creation might have failed or already exists: {e}"
-            )
-            # Fallback or assume it's handled by environment
-            self.agent_engine = None
-
         self.model_name = "gemini-1.5-pro"
-        self.app_name = "feedback_assistant_" + str(uuid.uuid4())[:6]
+        # We'll use a consistent name for the agent logic, but the engine is unique
+        self.agent_name = "feedback_assistant"
 
-        # Define ADK Agent
+        # Define ADK Agent Template
         self.agent = adk.Agent(
             model=self.model_name,
-            name="feedback_assistant",
+            name=self.agent_name,
             instruction="""You are a helpful assistant with perfect memory.
                 Instructions:
                 - Use the context to personalize responses
@@ -48,28 +36,6 @@ class FeedbackAgent:
                 - Build upon previous knowledge about the user
                 - If using semantic search, the memories shown are the most relevant to the current query""",
             tools=[PreloadMemoryTool()],
-        )
-
-        # Configure services
-        agent_engine_id = self.agent_engine.name if self.agent_engine else "default"
-
-        self.memory_bank_service = VertexAiMemoryBankService(
-            project=self.project,
-            location=self.location,
-            agent_engine_id=agent_engine_id,
-        )
-
-        self.session_service = VertexAiSessionService(
-            project=self.project,
-            location=self.location,
-            agent_engine_id=agent_engine_id,
-        )
-
-        self.runner = adk.Runner(
-            agent=self.agent,
-            app_name=self.app_name,
-            session_service=self.session_service,
-            memory_service=self.memory_bank_service,
         )
 
         self.classification_prompt = """
@@ -96,6 +62,64 @@ Output only a JSON object with:
 }
 """
 
+    async def _get_user_runner(self, user_id: str):
+        """Retrieve or create a reasoning engine for the user and return a Runner."""
+        users_collection = mongodb_service.get_collection("users")
+        user_doc = await users_collection.find_one({"_id": user_id})
+
+        if not user_doc:
+            # Fallback for transient users or create one if needed, 
+            # but usually they should be authenticated
+            user_doc = {"_id": user_id}
+
+        agent_id = user_doc.get("agent_id")
+        agent_engine = None
+
+        if agent_id:
+            try:
+                print(f"DEBUG: Getting existing Agent Engine for user {user_id}: {agent_id}")
+                agent_engine = agent_engines.get(agent_id)
+            except Exception as e:
+                print(f"DEBUG: Could not get engine {agent_id}, will create new: {e}")
+                agent_id = None
+
+        if not agent_id:
+            try:
+                print(f"DEBUG: Creating new Agent Engine for user {user_id}")
+                agent_engine = agent_engines.create()
+                agent_id = agent_engine.resource_name
+                await users_collection.update_one(
+                    {"_id": user_id},
+                    {"$set": {"agent_id": agent_id}},
+                    upsert=True
+                )
+                print(f"DEBUG: Created and stored Agent Engine: {agent_id}")
+            except Exception as e:
+                print(f"ERROR: Failed to create agent engine: {e}")
+                raise
+
+        # Initialize Services with this specific engine
+        memory_bank_service = VertexAiMemoryBankService(
+            project=self.project,
+            location=self.location,
+            agent_engine_id=agent_id,
+        )
+
+        session_service = VertexAiSessionService(
+            project=self.project,
+            location=self.location,
+            agent_engine_id=agent_id,
+        )
+
+        app_name = f"feedback_assistant_{user_id[:6]}"
+
+        return adk.Runner(
+            agent=self.agent,
+            app_name=app_name,
+            session_service=session_service,
+            memory_service=memory_bank_service,
+        ), app_name
+
     async def process_feedback(self, user_id: str, feedback_text: str):
         """Classify and potentially store user feedback in Memory Bank."""
         print(f"DEBUG: Processing feedback for user {user_id}: {feedback_text}")
@@ -119,16 +143,19 @@ Output only a JSON object with:
                 summary = result.get("preference_summary", feedback_text)
                 print(f"DEBUG: Feedback worth remembering: {summary}")
 
+                # Get runner dynamically
+                runner, app_name = await self._get_user_runner(user_id)
+
                 # ADK memory storage process:
                 # 1. Create a session
-                session = await self.runner.session_service.create_session(
-                    app_name=self.app_name,
+                session = await runner.session_service.create_session(
+                    app_name=app_name,
                     user_id=user_id,
                 )
 
                 # 2. Add the preference to the session history via a call
                 # This ensures the memory generation process has context.
-                async for event in self.runner.run_async(
+                async for event in runner.run_async(
                     user_id=user_id,
                     session_id=session.id,
                     new_message=types.Content(
@@ -141,11 +168,11 @@ Output only a JSON object with:
                     pass
 
                 # 3. Retrieve the session and add it to the Memory Bank
-                completed_session = await self.runner.session_service.get_session(
-                    app_name=self.app_name, user_id=user_id, session_id=session.id
+                completed_session = await runner.session_service.get_session(
+                    app_name=app_name, user_id=user_id, session_id=session.id
                 )
                 if completed_session:
-                    await self.memory_bank_service.add_session_to_memory(
+                    await runner.memory_service.add_session_to_memory(
                         completed_session
                     )
 

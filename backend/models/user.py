@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     picture_url: Optional[str] = None
+    agent_id: Optional[str] = None
 
 
 class UserCreate(UserBase):
