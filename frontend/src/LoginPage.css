@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+    :root {
+        --background: 30 20% 99%;
+        --foreground: 0 0% 10%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 10%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 10%;
+
+        --primary: 217 91% 60%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 0 0% 10%;
+
+        --muted: 210 40% 96%;
+        --muted-foreground: 220 9% 46%;
+
+        --accent: 217 91% 60%;
+        --accent-foreground: 0 0% 100%;
+
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 220 13% 91%;
+        --input: 220 13% 91%;
+        --ring: 217 91% 60%;
+
+        --radius: 0.5rem;
+
+        /* Feature pill colors */
+        --pill-teal-bg: 158 64% 92%;
+        --pill-teal-text: 158 64% 28%;
+        --pill-teal-icon: 158 64% 42%;
+
+        --pill-yellow-bg: 45 100% 94%;
+        --pill-yellow-text: 45 100% 30%;
+        --pill-yellow-icon: 45 100% 45%;
+
+        --pill-purple-bg: 291 47% 95%;
+        --pill-purple-text: 291 47% 35%;
+        --pill-purple-icon: 291 47% 45%;
+
+        --pill-blue-bg: 213 92% 95%;
+        --pill-blue-text: 213 79% 42%;
+        --pill-blue-icon: 213 79% 55%;
+
+        --pill-green-bg: 174 62% 93%;
+        --pill-green-text: 174 62% 30%;
+        --pill-green-icon: 174 62% 40%;
+
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217 91% 60%;
+    }
+
+    .dark {
+        --background: 222 84% 4.9%;
+        --foreground: 210 40% 98%;
+
+        --card: 222 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 222 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 217 91% 60%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+
+        --accent: 217 33% 17%;
+        --accent-foreground: 210 40% 98%;
+
+        --destructive: 0 63% 31%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 217 33% 17%;
+        --input: 217 33% 17%;
+        --ring: 212 27% 84%;
+
+        --sidebar-background: 240 5.9% 10%;
+        --sidebar-foreground: 240 4.8% 95.9%;
+        --sidebar-primary: 224 76% 48%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 3.7% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 240 3.7% 15.9%;
+        --sidebar-ring: 217 91% 60%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+}
+
+@layer components {
+    .hero-gradient-text {
+        @apply text-primary;
+    }
+
+    .hero-shadow {
+        box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.3);
+    }
+
+    .pill-teal {
+        background-color: hsl(var(--pill-teal-bg));
+        color: hsl(var(--pill-teal-text));
+    }
+
+    .pill-teal-icon {
+        color: hsl(var(--pill-teal-icon));
+    }
+
+    .pill-yellow {
+        background-color: hsl(var(--pill-yellow-bg));
+        color: hsl(var(--pill-yellow-text));
+    }
+
+    .pill-yellow-icon {
+        color: hsl(var(--pill-yellow-icon));
+    }
+
+    .pill-purple {
+        background-color: hsl(var(--pill-purple-bg));
+        color: hsl(var(--pill-purple-text));
+    }
+
+    .pill-purple-icon {
+        color: hsl(var(--pill-purple-icon));
+    }
+
+    .pill-blue {
+        background-color: hsl(var(--pill-blue-bg));
+        color: hsl(var(--pill-blue-text));
+    }
+
+    .pill-blue-icon {
+        color: hsl(var(--pill-blue-icon));
+    }
+
+    .pill-green {
+        background-color: hsl(var(--pill-green-bg));
+        color: hsl(var(--pill-green-text));
+    }
+
+    .pill-green-icon {
+        color: hsl(var(--pill-green-icon));
+    }
+}
