@@ -46,9 +46,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 async def verify_google_token(token: str) -> Dict[str, Any]:
     """Verifies the Google ID token or Access Token and returns the user's info."""
-    print("DEBUG: Verifying Google token...")
     if not GOOGLE_CLIENT_ID:
-        print("ERROR: GOOGLE_CLIENT_ID is not set!")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google Client ID is not configured on the server.",
@@ -59,10 +57,9 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
         id_info = id_token.verify_oauth2_token(
             token, google_requests.Request(), GOOGLE_CLIENT_ID
         )
-        print("DEBUG: Google ID token successfully verified.")
         return dict(id_info)
-    except ValueError as e:
-        print(f"DEBUG: Token not a valid ID token ({e}), attempting to verify as Access Token...")
+    except Exception:
+        pass
     
     # Second attempt: Verify as Access Token
     try:
@@ -85,14 +82,12 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
                       # For access tokens, 'aud' is usually the client_id. 
                       pass 
 
-             print("DEBUG: Google Access Token successfully verified via userinfo.")
+             
              return user_info
         else:
-            print(f"ERROR: Failed to verify access token. Status: {response.status_code}, Body: {response.text}")
             raise ValueError("Invalid Access Token")
 
     except Exception as e:
-        print(f"ERROR: Invalid Google token: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Google token: {e}",

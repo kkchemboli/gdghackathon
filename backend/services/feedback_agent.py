@@ -77,15 +77,12 @@ Output only a JSON object with:
 
         if agent_id:
             try:
-                print(f"DEBUG: Getting existing Agent Engine for user {user_id}: {agent_id}")
                 agent_engine = agent_engines.get(agent_id)
             except Exception as e:
-                print(f"DEBUG: Could not get engine {agent_id}, will create new: {e}")
                 agent_id = None
 
         if not agent_id:
             try:
-                print(f"DEBUG: Creating new Agent Engine for user {user_id}")
                 agent_engine = agent_engines.create()
                 agent_id = agent_engine.resource_name
                 await users_collection.update_one(
@@ -93,10 +90,8 @@ Output only a JSON object with:
                     {"$set": {"agent_id": agent_id}},
                     upsert=True
                 )
-                print(f"DEBUG: Created and stored Agent Engine: {agent_id}")
             except Exception as e:
-                print(f"ERROR: Failed to create agent engine: {e}")
-                raise
+                raise e
 
         # Initialize Services with this specific engine
         memory_bank_service = VertexAiMemoryBankService(
@@ -122,7 +117,6 @@ Output only a JSON object with:
 
     async def process_feedback(self, user_id: str, feedback_text: str):
         """Classify and potentially store user feedback in Memory Bank."""
-        print(f"DEBUG: Processing feedback for user {user_id}: {feedback_text}")
 
         try:
             # Classification call using standard GenerativeModel for internal decision
@@ -141,7 +135,6 @@ Output only a JSON object with:
 
             if result.get("worth_remembering"):
                 summary = result.get("preference_summary", feedback_text)
-                print(f"DEBUG: Feedback worth remembering: {summary}")
 
                 # Get runner dynamically
                 runner, app_name = await self._get_user_runner(user_id)
@@ -188,11 +181,9 @@ Output only a JSON object with:
 
                 return True, f"Memory stored: {summary}"
             else:
-                print("DEBUG: Feedback ignored (not worth remembering)")
                 return False, "Feedback acknowledged but not stored as a preference."
 
         except Exception as e:
-            print(f"ERROR in FeedbackAgent: {str(e)}")
             return False, f"Error processing feedback: {str(e)}"
 
     async def get_user_memories(self, user_id: str) -> str:

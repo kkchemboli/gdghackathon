@@ -109,23 +109,17 @@ class FeedbackResponse(BaseModel):
 async def login_with_google(
     token: security_service.GoogleToken, user_service: UserService = Depends()
 ):
-    print("DEBUG: Received request for /auth/google")
     try:
         google_user_info = await security_service.verify_google_token(token.credential)
-        print(f"DEBUG: Google token verified. User info: {google_user_info}")
 
         user = await user_service.get_or_create_user_from_google(google_user_info)
-        print(f"DEBUG: User retrieved or created: {user.email}")
 
         access_token = security_service.create_access_token(data={"sub": user.email})
-        print("DEBUG: Access token created successfully.")
 
         return {"access_token": access_token, "token_type": "bearer", "user_id": str(user.id)}
     except HTTPException as e:
-        print(f"DEBUG: HTTPException in login_with_google: {e.detail}")
         raise e
     except Exception as e:
-        print(f"DEBUG: Exception in login_with_google: {e}")
         import traceback
 
         traceback.print_exc()
@@ -326,11 +320,11 @@ async def submit_feedback(
 ):
     """Submit feedback for the AI agent."""
     try:
-        result = await feedback_agent(str(current_user.id), request.feedback_text)
+        stored, message = await feedback_agent.process_feedback(str(current_user.id), request.feedback_text)
         return FeedbackResponse(
             status="success",
-            message=result.get("message", "Feedback processed"),
-            stored=result.get("stored", True)
+            message=message,
+            stored=stored
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")

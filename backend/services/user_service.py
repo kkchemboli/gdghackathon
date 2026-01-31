@@ -20,19 +20,15 @@ class UserService:
         using information from a verified Google ID token.
         """
         user_email = google_user_info.get("email")
-        print(f"DEBUG: Getting or creating user for email: {user_email}")
         if not user_email:
-            print("ERROR: Email not found in Google user info")
             raise ValueError("Email not found in Google user info")
 
         existing_user = await self.get_user_by_email(user_email)
         if existing_user:
-            print(f"DEBUG: Found existing user: {existing_user.id}")
             # Optionally, update user's full_name and picture_url here if they've changed
             return existing_user
 
         # Create a new user if they don't exist
-        print("DEBUG: No existing user found. Creating new user.")
         new_user_data = UserCreate(
             email=user_email,
             full_name=google_user_info.get("name"),
@@ -44,9 +40,7 @@ class UserService:
 
         try:
             result = await collection.insert_one(user_dict)
-            print(f"DEBUG: New user inserted with ID: {result.inserted_id}")
         except DuplicateKeyError:
-            print(f"DEBUG: Race condition handled. User {user_email} already exists.")
             # The user was created by another request between the find and insert calls.
             # We can now safely retrieve the user that was just created.
             existing_user = await self.get_user_by_email(user_email)
@@ -60,10 +54,8 @@ class UserService:
 
         created_user = await collection.find_one({"_id": result.inserted_id})
         if created_user:
-            print("DEBUG: Successfully retrieved created user from DB.")
             return UserInDB.model_validate(created_user)
 
-        print("ERROR: Failed to retrieve created user after insertion.")
         raise ValueError("Could not create user")
 
     async def get_user(self, id: str) -> Optional[UserInDB]:

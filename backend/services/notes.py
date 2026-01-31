@@ -14,13 +14,11 @@ class PDF(FPDF):
 
 async def generate_important_notes_pdf(user_id: str, concepts: list):
     """Generate a PDF of important notes using extracted concepts and a single RAG call."""
-    print(f"DEBUG: generate_important_notes_pdf starting for user {user_id}")
     
     pdf = PDF()
     pdf.add_page()
     
     if not concepts:
-        print("DEBUG: No concepts provided to generate_important_notes_pdf")
         pdf.set_font("Arial", size=12)
         pdf.multi_cell(0, 10, "No concepts were extracted. Please load a video first.")
         # pdf.output returns string in older fpdf
@@ -37,11 +35,9 @@ async def generate_important_notes_pdf(user_id: str, concepts: list):
         f"IMPORTANT: Return ONLY the formatted text. DO NOT wrap the output in JSON or code blocks.\n\n"
         f"Concepts: {concepts_list}"
     )
-    print(f"DEBUG: Querying RAG with: {query}...")
     
     try:
         result = await query_video(query, user_id)
-        print(f"DEBUG: RAG result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
         
         if isinstance(result, dict):
             if 'answer' in result:
@@ -78,10 +74,8 @@ async def generate_important_notes_pdf(user_id: str, concepts: list):
         content = content.replace('```json', '').replace('```', '').strip()
         
     except Exception as e:
-        print(f"DEBUG: Error in generate_important_notes_pdf query_video: {e}")
         content = f"Error generating notes: {str(e)}"
     
-    print(f"DEBUG: Formatting safe content, length={len(content)}")
     safe_content = content.encode('latin-1', 'replace').decode('latin-1')
     
     # Simple Markdown-like rendering
@@ -122,7 +116,6 @@ async def generate_important_notes_pdf(user_id: str, concepts: list):
             pdf.multi_cell(0, 8, line)
             pdf.ln(2)
     
-    print("DEBUG: PDF output calling...")
     out = pdf.output(dest='S')
     return out.encode('latin-1') if isinstance(out, str) else out
 

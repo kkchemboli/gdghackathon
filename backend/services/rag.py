@@ -19,7 +19,6 @@ LOCATION = "us-west1"
 MODEL_LOCATION = "us-central1"
 
 if PROJECT_ID:
-    print(f"DEBUG: Initializing Vertex AI with project={PROJECT_ID}, location={LOCATION}")
     vertexai.init(project=PROJECT_ID, location=LOCATION)
 else:
     print("Warning: GCP_PROJECT_ID not set. Vertex AI functionality will fail.")
@@ -127,10 +126,6 @@ def load_youtube_video_stream(url: str, user_id: str):
             yield json.dumps({"status": "error", "message": "No transcript found"}) + "\n"
             return
         
-        # Debug Log for RAG Content
-        first_chunk_snippet = documents[0].page_content[:200]
-        print(f"DEBUG: First transcript chunk: {first_chunk_snippet}")
-
         # Update user_docs for quiz.py
         user_docs[user_id] = documents
 
@@ -242,10 +237,6 @@ async def query_video(query: str, user_id: str) -> dict:
         
         context = "\n\n---\n\n".join(context_parts) if context_parts else "No relevant context found."
         
-        print(f"DEBUG query_video: Retrieved {len(context_parts)} chunks for query: {query[:50]}...")
-        if context_parts:
-            print(f"DEBUG query_video: First chunk preview: {context_parts[0][:100]}...")
-        
         # Ensure we are initialized in a region that supports the model
         # Try to re-init if us-west1 failed for generative models previously
         vertexai.init(project=PROJECT_ID, location=MODEL_LOCATION)
@@ -254,7 +245,6 @@ async def query_video(query: str, user_id: str) -> dict:
         memories = await feedback_agent.get_user_memories(user_id)
         if memories:
             context = f"{memories}\n\n---\n\n{context}"
-            print(f"DEBUG query_video: Injected user memories for {user_id}")
 
         # Generate answer using the retrieved context
         prompt = f"""You are a helpful assistant. Answer the user's question based ONLY on the provided context (Youtube Video Transcript).
