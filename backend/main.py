@@ -30,7 +30,7 @@ origins = [
     "http://localhost",
     "http://localhost:3000",
     "http://localhost:5173",
-    "https://tutorai-kkchemboli.netlify.app/",
+    "https://tutorai-kkchemboli.netlify.app",
 ]
 
 
