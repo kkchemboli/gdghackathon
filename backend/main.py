@@ -24,7 +24,7 @@ import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Query, APIRouter
 from contextlib import asynccontextmanager
-
+import os
 # --- App Initialization ---
 origins = [
     "http://localhost",
