@@ -120,7 +120,7 @@ async def login_with_google(
         access_token = security_service.create_access_token(data={"sub": user.email})
         print("DEBUG: Access token created successfully.")
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer", "user_id": str(user.id)}
     except HTTPException as e:
         print(f"DEBUG: HTTPException in login_with_google: {e.detail}")
         raise e
@@ -241,6 +241,137 @@ async def query(
         raise HTTPException(
             status_code=500, detail=f"Failed to process query: {str(e)}"
         )
+
+
+@api_router.get("/important_notes")
+async def get_important_notes(
+    conversation_id: str,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Generate and return important notes PDF for a conversation."""
+    try:
+        conversation = await conversation_service.get_conversation(conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        if str(conversation.user_id) != str(current_user.id):
+             raise HTTPException(status_code=403, detail="Not authorized to access this conversation")
+
+        pdf_content = await generate_important_notes_pdf(
+            user_id=str(current_user.id), concepts=conversation.concepts
+        )
+
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=notes_{conversation_id}.pdf"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate notes: {str(e)}")
+
+
+@api_router.post("/create_quiz", response_model=QuizResponse)
+async def create_quiz_endpoint(
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Generate a quiz for the user based on their current video context."""
+    try:
+        questions = generate_quiz(str(current_user.id))
+        return QuizResponse(questions=questions)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create quiz: {str(e)}")
+
+
+@api_router.post("/revision_doc", response_model=RevisionResponse)
+async def create_revision_doc(
+    request: RevisionRequest,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Generate a remedial revision document based on user mistakes."""
+    try:
+        # In a real app, this might use generate_remedial_quiz and some logic to create markdown
+        # For now, we'll use a placeholder or call a service if available.
+        # Based on imports, we have feedback_agent which might be relevant, or we can use LLM.
+        from services.rag import model
+        
+        mistakes_text = "\n".join([f"- {m.question} (Correct answer: {m.correct_option})" for m in request.mistakes])
+        prompt = f"Based on the following mistakes in a video quiz, generate a helpful revision summary in markdown:\n\n{mistakes_text}"
+        
+        response = model.generate_content(prompt)
+        return RevisionResponse(markdown_content=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate revision doc: {str(e)}")
+
+
+@api_router.post("/learn_from_mistakes", response_model=QuizResponse)
+async def learn_from_mistakes(
+    request: RevisionRequest,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Generate a remedial quiz based on user mistakes."""
+    try:
+        mistakes_dicts = [m.dict() for m in request.mistakes]
+        questions = generate_remedial_quiz(mistakes_dicts, str(current_user.id))
+        return QuizResponse(questions=questions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate remedial quiz: {str(e)}")
+
+
+@api_router.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(
+    request: FeedbackRequest,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Submit feedback for the AI agent."""
+    try:
+        result = await feedback_agent(str(current_user.id), request.feedback_text)
+        return FeedbackResponse(
+            status="success",
+            message=result.get("message", "Feedback processed"),
+            stored=result.get("stored", True)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
+
+
+@api_router.get("/conversations/{user_id}", response_model=List[ConversationResponse])
+async def get_user_conversations(
+    user_id: str,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Get all conversations for a user."""
+    if str(user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return await conversation_service.get_user_conversations(user_id)
+
+
+@api_router.get("/messages/{conversation_id}", response_model=List[MessageResponse])
+async def get_conversation_messages(
+    conversation_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Get all messages for a conversation."""
+    conversation = await conversation_service.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if str(conversation.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return await message_service.get_conversation_messages(conversation_id, page, limit)
+
+
+@api_router.post("/conversations", response_model=ConversationResponse)
+async def create_conversation_endpoint(
+    request: ConversationCreate,
+    current_user: User = Depends(security_service.get_current_user),
+):
+    """Manually create a conversation."""
+    if str(request.user_id) != str(current_user.id):
+         raise HTTPException(status_code=403, detail="Not authorized")
+    return await conversation_service.create_conversation(request)
 
 
 # --- Other Endpoints (can be protected as needed) ---

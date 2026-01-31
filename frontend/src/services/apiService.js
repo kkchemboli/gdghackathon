@@ -6,8 +6,7 @@ const PYTHON_API_BASE_URL = import.meta.env.VITE_PYTHON_API_URL || 'http://local
 const apiRequest = async (url, options = {}) => {
   const defaultHeaders = {
     'Content-Type': 'application/json',
-    // Add authentication token if needed
-    // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
   }
 
   try {
@@ -32,12 +31,12 @@ const apiRequest = async (url, options = {}) => {
 }
 
 // Quiz API
-export const fetchQuiz = async (videoId, userId = 'demo-user') => {
+export const fetchQuiz = async (videoId, userId) => {
   try {
     // The backend endpoint is /create_quiz and it now expects user_id
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/create_quiz`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/create_quiz`, {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId })
+      body: JSON.stringify({})
     })
     return data
   } catch (error) {
@@ -46,11 +45,11 @@ export const fetchQuiz = async (videoId, userId = 'demo-user') => {
   }
 }
 
-export const createRevisionDoc = async (mistakes, userId = 'demo-user') => {
+export const createRevisionDoc = async (mistakes, userId) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/revision_doc`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/revision_doc`, {
       method: 'POST',
-      body: JSON.stringify({ mistakes, user_id: userId }),
+      body: JSON.stringify({ mistakes }),
     })
     return data
   } catch (error) {
@@ -61,7 +60,7 @@ export const createRevisionDoc = async (mistakes, userId = 'demo-user') => {
 
 export const learnFromMistakes = async (mistakes) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/learn_from_mistakes`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/learn_from_mistakes`, {
       method: 'POST',
       body: JSON.stringify({ mistakes }),
     })
@@ -75,7 +74,7 @@ export const learnFromMistakes = async (mistakes) => {
 // Flashcard API
 export const fetchFlashcards = async () => {
   try {
-    const data = await apiRequest(`${API_BASE_URL}/flashcards/`)
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/flashcards/`)
     return data
   } catch (error) {
     console.error('Flashcard Error:', error)
@@ -84,10 +83,13 @@ export const fetchFlashcards = async () => {
 }
 
 // Important Topics API
-export const fetchImportantTopics = async (videoId, userId = 'demo-user', conversationId) => {
+export const fetchImportantTopics = async (videoId, userId, conversationId) => {
   try {
-    const response = await fetch(`${PYTHON_API_BASE_URL}/important_notes?user_id=${userId}&conversation_id=${conversationId}`, {
+    const response = await fetch(`${PYTHON_API_BASE_URL}/api/important_notes?conversation_id=${conversationId}`, {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      }
     })
     if (!response.ok) throw new Error('Failed to fetch important notes')
     return await response.blob()
@@ -100,7 +102,7 @@ export const fetchImportantTopics = async (videoId, userId = 'demo-user', conver
 // Chat/AI API
 export const fetchChatResponse = async (message) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/query`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/query`, {
       method: 'POST',
       body: JSON.stringify({
         query: message,
@@ -116,11 +118,10 @@ export const fetchChatResponse = async (message) => {
 // Send user query to backend for processing with RAG
 export const sendUserQuery = async (query, userId, conversationId) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/query`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/query`, {
       method: 'POST',
       body: JSON.stringify({
         query: query,
-        id: userId,
         conversation_id: conversationId
       })
     })
@@ -132,19 +133,19 @@ export const sendUserQuery = async (query, userId, conversationId) => {
 }
 
 // Video Upload/Processing
-export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') => {
+export const processVideo = async (videoUrl, onProgress, userId) => {
   try {
     // Generate a simple ID from the URL if not provided
     const videoId = videoUrl.split('v=')[1] || videoUrl.split('/').pop() || 'unknown'
 
-    const response = await fetch(`${PYTHON_API_BASE_URL}/video`, {
+    const response = await fetch(`${PYTHON_API_BASE_URL}/api/video`, {
       method: 'POST',
       body: JSON.stringify({
         url: videoUrl,
-        id: userId,
       }),
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
       }
     })
 
@@ -230,7 +231,7 @@ export const processVideo = async (videoUrl, onProgress, userId = 'demo-user') =
 // Conversation Management APIs
 export const getUserConversations = async (userId) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/conversations/${userId}`)
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/conversations/${userId}`)
     return data
   } catch (error) {
     console.error('Get User Conversations Error:', error)
@@ -240,7 +241,7 @@ export const getUserConversations = async (userId) => {
 
 export const getConversationMessages = async (conversationId, page = 1, limit = 50) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/messages/${conversationId}?page=${page}&limit=${limit}`)
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/messages/${conversationId}?page=${page}&limit=${limit}`)
     return data
   } catch (error) {
     console.error('Get Conversation Messages Error:', error)
@@ -250,7 +251,7 @@ export const getConversationMessages = async (conversationId, page = 1, limit = 
 
 export const createConversation = async (conversationData) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/conversations`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/conversations`, {
       method: 'POST',
       body: JSON.stringify(conversationData)
     })
@@ -292,7 +293,7 @@ export const processPdf = async (formData) => {
 // User Preference/Feedback API
 export const submitFeedback = async (userId, feedbackText) => {
   try {
-    const data = await apiRequest(`${PYTHON_API_BASE_URL}/feedback`, {
+    const data = await apiRequest(`${PYTHON_API_BASE_URL}/api/feedback`, {
       method: 'POST',
       body: JSON.stringify({
         user_id: userId,

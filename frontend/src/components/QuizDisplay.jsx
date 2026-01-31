@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import './QuizDisplay.css';
-import { submitFeedback } from '../services/apiService';
+import { useAuth } from '../AuthContext';
 
 const QuizDisplay = ({ questions, onWrongAnswer, onCreateRevision }) => {
+    const { userId } = useAuth();
     // Track selected option for each question: { [questionIndex]: selectedOptionString }
     const [selectedOptions, setSelectedOptions] = useState({});
     // Track checked state to disable further clicks: { [questionIndex]: boolean }
@@ -40,7 +41,6 @@ const QuizDisplay = ({ questions, onWrongAnswer, onCreateRevision }) => {
         setIsSubmitting(true);
         setFeedbackStatus(null);
         try {
-            const userId = 'demo-user'; // Default for now
             const result = await submitFeedback(userId, feedbackText);
             setFeedbackStatus({
                 type: 'success',

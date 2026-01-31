@@ -9,9 +9,11 @@ import { Spinner } from '../../components/ui/spinner'
 import quiz_icon from '../../assets/quiz.png'
 import important_icon from '../../assets/important.png'
 import flascard_icon from '../../assets/flashcard.png'
+import { useAuth } from '../../AuthContext'
 import Sidebar from '../../component/Sidebar/sidebar.jsx'
 
 const Video = () => {
+  const { userId } = useAuth()
   const [input, setInput] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [videoId, setVideoId] = useState(null)
@@ -29,7 +31,6 @@ const Video = () => {
 
   // Conversation management state
   const [currentConversation, setCurrentConversation] = useState(null)
-  const [userId] = useState('demo-user') // In a real app, this would come from auth
 
   // Feedback state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -201,7 +202,7 @@ const Video = () => {
         data = await learnFromMistakes(wrongAnswers);
       } else {
         // General refresh if no mistakes
-        data = await fetchQuiz(videoId);
+        data = await fetchQuiz(videoId, userId);
       }
 
       // Reset wrong answers for the new session *after* generating remedial quiz

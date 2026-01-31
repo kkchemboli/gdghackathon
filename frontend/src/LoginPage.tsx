@@ -22,8 +22,8 @@ const LoginPage = () => {
         const response = await api.post('/auth/google', {
           credential: tokenResponse.access_token, // Sending access token as credential
         });
-        const { access_token } = response.data;
-        login(access_token);
+        const { access_token, user_id } = response.data;
+        login(access_token, user_id);
       } catch (error) {
         console.error('Login Failed:', error);
       }
