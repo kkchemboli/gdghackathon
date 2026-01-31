@@ -5,7 +5,7 @@ import asyncio
 import vertexai
 from vertexai.generative_models import GenerativeModel
 from vertexai import agent_engines
-from google import adk
+from google.adk import Agent,Runner
 from google.adk.memory.vertex_ai_memory_bank_service import VertexAiMemoryBankService
 from google.adk.sessions.vertex_ai_session_service import VertexAiSessionService
 from google.adk.tools.preload_memory_tool import PreloadMemoryTool
@@ -26,7 +26,7 @@ class FeedbackAgent:
         self.agent_name = "feedback_assistant"
 
         # Define ADK Agent Template
-        self.agent = adk.Agent(
+        self.agent = Agent(
             model=self.model_name,
             name=self.agent_name,
             instruction="""You are a helpful assistant with perfect memory.
@@ -113,7 +113,7 @@ Output only a JSON object with:
 
         app_name = f"feedback_assistant_{user_id[:6]}"
 
-        return adk.Runner(
+        return Runner(
             agent=self.agent,
             app_name=app_name,
             session_service=session_service,
