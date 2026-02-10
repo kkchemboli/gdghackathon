@@ -38,8 +38,7 @@ origins = [
 async def lifespan_context(app: FastAPI):
     # Startup
     await mongodb_service.connect()
-    await mongodb_service.create_indexes()
-    print("Connected to MongoDB and created indexes")
+    print("Connected to MongoDB")
     yield
     # Shutdown
     await mongodb_service.disconnect()
