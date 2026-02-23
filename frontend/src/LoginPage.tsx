@@ -36,7 +36,7 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background selection:bg-primary/20">
       <Navbar onLogin={() => googleLogin()} />
-      <HeroSection />
+      <HeroSection onGetStarted={() => googleLogin()} />
     </div>
   );
 };

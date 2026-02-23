@@ -1,10 +1,18 @@
-import { Search, Lightbulb, User, CheckCircle, Play } from 'lucide-react';
+import { Search, Lightbulb, User, CheckCircle, Play, X } from 'lucide-react';
 import { Button } from './ui/button';
 import FeaturePill from './FeaturePill';
 import laptopIllustration from '../assets/laptop-illustration.png';
 import videoLearningIllustration from '../assets/video-learning-illustration.png';
+import demoVideo from '../assets/demo.mp4';
+import { useState } from 'react';
 
-const HeroSection = () => {
+interface HeroSectionProps {
+  onGetStarted?: () => void;
+}
+
+const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
+  const [showVideo, setShowVideo] = useState(false);
+
   return (
     <main className="max-w-7xl mx-auto px-6 pt-12 pb-24 text-center">
       {/* Hero Content */}
@@ -22,14 +30,36 @@ const HeroSection = () => {
       </div>
 
       {/* Hero Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-        <Button variant="hero" size="lg">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+        <Button variant="hero" size="lg" onClick={onGetStarted}>
           Get Started
         </Button>
-        <Button variant="outline" size="lg">
+        <Button variant="outline" size="lg" onClick={() => setShowVideo(true)}>
           See How It Works
         </Button>
       </div>
+
+      {/* Inline Video Display */}
+      {showVideo && (
+        <div className="max-w-4xl mx-auto mb-20 animate-in slide-in-from-top-4 duration-500">
+          <div className="relative bg-card rounded-2xl shadow-2xl border overflow-hidden">
+            <button
+              onClick={() => setShowVideo(false)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/50 hover:bg-background/80 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="aspect-video">
+              <video
+                src={demoVideo}
+                className="w-full h-full object-cover"
+                controls
+                autoPlay
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Illustrations */}
       <div className="relative max-w-5xl mx-auto mb-24">
