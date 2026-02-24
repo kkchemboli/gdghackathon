@@ -3,7 +3,7 @@ import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import Navbar from './component/Navbar/navbar.jsx';
 import Home from './pages/home/home.jsx';
 import Video from './pages/video/video.jsx';
-import Pdf from './pages/pdf/Pdf.jsx';
+import ComingSoon from './pages/ComingSoon/ComingSoon.jsx';
 import LoginPage from './LoginPage';
 import ProtectedRoute from './ProtectedRoute';
 import { useAuth } from './AuthContext';
@@ -42,11 +42,11 @@ const App = () => {
             },
             {
               path: 'pdf',
-              element: <Pdf />,
+              element: <ComingSoon />,
             },
             {
               path: 'video/:categoryId/:videoId',
-              element: <Pdf />,
+              element: <ComingSoon />,
             },
           ],
         },
